@@ -265,16 +265,11 @@ if __name__ in {
         title=config_content[
             "general_settings"
         ]["app_title"],
-
         host="0.0.0.0",
         port=8081,
-
         storage_secret="raw2ready_secret_key",
-
-        reload=False,
-
+        reload=True,
         reconnect_timeout=60,
-
         favicon="src/assets/images/raw2ready.svg",
     )
 

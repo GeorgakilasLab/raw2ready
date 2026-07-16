@@ -35,6 +35,7 @@ class calculategui:
         add_page=False,
         storage_container=None,
         storage_container_=None,
+        parent=None,
     ) -> None:
         """Initializes the calculategui.
 
@@ -60,6 +61,7 @@ class calculategui:
         self.frame_name = frame_name
         self.page_url_path = page_url_path
         self.storage = storage_container
+        self.parent = parent
 
         self.df = None
         self.alias_inputs = {}
@@ -895,6 +897,8 @@ class calculategui:
                 f"Column '{new_col}' created successfully",
                 type="info"
             )
+            if self.parent and hasattr(self.parent, "refresh_all_pages"):
+                self.parent.refresh_all_pages()
     
         except Exception as e:
     

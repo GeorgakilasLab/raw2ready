@@ -94,6 +94,7 @@ class loadgui:
         storage_container=None,
         storage_container_=None,
         dirs=None,
+        parent=None,
     ):
         """Initializes loadgui.
 
@@ -119,6 +120,7 @@ class loadgui:
         self.page_url_path = page_url_path
         self.frame_name = frame_name
         self.storage = storage_container
+        self.parent = parent
         
         if dirs is None:
             raise RuntimeError("DIRS not passed to load_gui")
@@ -966,6 +968,8 @@ class loadgui:
             self.refresh_preview()
     
             ui.notify("Parsing completed successfully", type="info")
+            if self.parent and hasattr(self.parent, "refresh_all_pages"):
+                self.parent.refresh_all_pages()
     
         except Exception as ex:
     
@@ -1020,6 +1024,8 @@ class loadgui:
         
         self.show_uploaded_files()
         self.refresh_preview()
+        if self.parent and hasattr(self.parent, "refresh_all_pages"):
+            self.parent.refresh_all_pages()
 
     # ==================================================
     # DATA CLEANING
@@ -1897,6 +1903,8 @@ class loadgui:
             # SAFE UI REFRESH
             # -------------------------
             self.safe_refresh()
+            if self.parent and hasattr(self.parent, "refresh_all_pages"):
+                self.parent.refresh_all_pages()
     
             # -------------------------
             # BUTTON VISUAL FEEDBACK
@@ -2247,3 +2255,5 @@ class loadgui:
             self.validation_label.text = "No dataset loaded."
     
         ui.notify("Memory fully cleared", type="info")
+        if self.parent and hasattr(self.parent, "refresh_all_pages"):
+            self.parent.refresh_all_pages()

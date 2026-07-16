@@ -40,14 +40,16 @@ class NewProtocol:
     # =====================================================
     # INIT
     # =====================================================
-    def __init__(self, storage_container=None):
+    def __init__(self, storage_container=None, parent=None):
         """Initializes the NewProtocol.
 
         Args:
             storage_container: Optional primary data storage dictionary.
+            parent: Optional parent page layout.
         """
 
         self.storage = storage_container or {}
+        self.parent = parent
     
         # =================================================
         # SESSION JSON CACHE
@@ -548,6 +550,8 @@ class NewProtocol:
                 f"{filename} loaded successfully",
                 type="info"
             )
+            if self.parent and hasattr(self.parent, "refresh_all_pages"):
+                self.parent.refresh_all_pages()
     
             print("\n===== LOADED JSON =====")
     
@@ -1812,8 +1816,10 @@ class NewProtocol:
             if self.score_label is not None:
             
                self.score_label.text = (
-                   "JSON initialized successfully"
-               )
+                    "JSON initialized successfully"
+                )
+            if self.parent and hasattr(self.parent, "refresh_all_pages"):
+                self.parent.refresh_all_pages()
     
             # =============================================
             # SUCCESS

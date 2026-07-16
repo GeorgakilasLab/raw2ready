@@ -8,7 +8,7 @@ Follow these steps to set up your development environment and launch the **raw2r
 
 Ensure you have the following installed on your system:
 *   [Miniconda](https://docs.anaconda.com/miniconda/) or Anaconda.
-*   [Ollama](https://ollama.com/) (required for AI copilot capabilities).
+*   [Ollama](https://ollama.com/) (optional, required for local AI capabilities).
 
 ---
 
@@ -18,7 +18,7 @@ Initialize and configure the environment using the provided `conda.yml`:
 
 ```bash
 # Clone the repository
-git clone https://github.com/athena-rc/raw2ready.git
+git clone https://github.com/GeorgakilasLab/raw2ready.git
 cd raw2ready
 
 # Create the conda environment
@@ -52,10 +52,10 @@ The web application leverages local LLM instances via Ollama:
 
 ## 4. Run the Web Application
 
-With the environment activated and Ollama running, launch the NiceGUI web server:
+With the environment activated and Ollama running, launch the raw2ready web server:
 
 ```bash
-python3 run_app.py
+python run_app.py
 ```
 
-Open your browser and navigate to `http://localhost:8080`.
+Open your browser and navigate to `http://localhost:8081`.

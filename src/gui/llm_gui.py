@@ -65,6 +65,7 @@ class LlmGui:
         add_page=False,
         storage_container=None,
         storage_container_=None,
+        parent=None,
     ):
         """Initializes LlmGui.
 
@@ -101,6 +102,8 @@ class LlmGui:
         self.frame_name = frame_name
 
         self.storage = storage_container
+
+        self.parent = parent
 
         # =============================================
         # SAVED PROTOCOL DIRECTORY

@@ -45,6 +45,7 @@ class mergegui:
         add_page=False,
         storage_container=None,
         storage_container_=None,
+        parent=None,
     ):
         """Initializes the mergegui.
 
@@ -67,6 +68,7 @@ class mergegui:
 
         self.storage = storage_container
         self.config_ = config
+        self.parent = parent
 
         self.page_url_path = page_url_path
         self.frame_name = frame_name
@@ -555,6 +557,8 @@ class mergegui:
             self.info_label.text = f"{name} | {len(result)} rows"
 
             ui.notify("Merge completed", type="info")
+            if self.parent and hasattr(self.parent, "refresh_all_pages"):
+                self.parent.refresh_all_pages()
 
         except Exception as e:
             logger.error(traceback.format_exc())

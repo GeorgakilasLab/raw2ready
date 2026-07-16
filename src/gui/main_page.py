@@ -7,22 +7,12 @@ CoPilot chatbot assistant.
 
 from nicegui import ui, app
 
+import pandas as pd
+import numpy as np
 import src.utils.theme as theme
 from src.utils.logging_config import get_logger
 
-from src.core.ai_analytics import (
-    storage_to_df,
-    summarize_df,
-    detect_anomalies,
-    clean_df,
-    save_df_to_storage,
-)
 
-from src.core.auto_visualizer import AutoVisualizer
-from src.core.ai_chat_engine import ask_ai
-from src.core.smart_recommendations import recommend_from_storage
-from src.core.forecast_engine import ask_forecast
-from src.core.report_generator import ask_report
 
 import src.gui.load_gui as load_gui
 import src.gui.merge_gui as merge_gui
@@ -107,12 +97,16 @@ class main_page:
         self.lbl_cols = None
         self.lbl_last = None
 
-        self.preview_container = None
-        self.ai_result_container = None
-        self.chat_messages_container = None
+        self.load_page = None
+        self.merge_page = None
+        self.calculate_page = None
+        self.plot_page = None
+        self.metadata_page = None
+        self.llm_page = None
 
-        self.chat_input = None
-        self.chat_history = []
+
+
+        self.files_table = None
 
         self.sql_input = None
         self.sql_results_container = None
@@ -280,7 +274,9 @@ class main_page:
             if self.lbl_last:
                 self.lbl_last.text = last_file
 
-            self.render_preview()
+            if self.files_table:
+                self.files_table.rows = self.get_files_matrix()
+                self.files_table.update()
 
             ui.notify(
                 "Dashboard refreshed",
@@ -289,6 +285,59 @@ class main_page:
 
         except Exception as e:
             logger.warning(f"refresh error: {e}")
+
+    def refresh_all_pages(self):
+        """Refreshes all page components, lists, and selectors when data is modified."""
+        logger.info("Triggering refresh of all pages...")
+        
+        # 1. Refresh dashboard stats and matrix
+        try:
+            self.refresh_dashboard()
+        except Exception as e:
+            logger.warning(f"Dashboard refresh error: {e}")
+            
+        # 2. Refresh Load page files list and status
+        if hasattr(self, "load_page") and self.load_page:
+            try:
+                self.load_page.show_uploaded_files()
+                self.load_page.refresh_status()
+            except Exception as e:
+                logger.warning(f"Load page refresh error: {e}")
+                
+        # 3. Refresh Merge page dropdowns
+        if hasattr(self, "merge_page") and self.merge_page:
+            try:
+                self.merge_page.refresh_loaded_files()
+            except Exception as e:
+                logger.warning(f"Merge page refresh error: {e}")
+                
+        # 4. Refresh Calculate page dropdowns
+        if hasattr(self, "calculate_page") and self.calculate_page:
+            try:
+                self.calculate_page.refresh_files()
+            except Exception as e:
+                logger.warning(f"Calculate page refresh error: {e}")
+                
+        # 5. Refresh Plot page dropdowns
+        if hasattr(self, "plot_page") and self.plot_page:
+            try:
+                self.plot_page.refresh_loaded_files()
+            except Exception as e:
+                logger.warning(f"Plot page refresh error: {e}")
+                
+        # 6. Refresh Metadata page dropdowns
+        if hasattr(self, "metadata_page") and self.metadata_page:
+            try:
+                self.metadata_page.refresh_json_dropdown()
+            except Exception as e:
+                logger.warning(f"Metadata page refresh error: {e}")
+                
+        # 7. Refresh LLM page dropdowns
+        if hasattr(self, "llm_page") and self.llm_page:
+            try:
+                self.llm_page.refresh_loaded_files()
+            except Exception as e:
+                logger.warning(f"LLM page refresh error: {e}")
 
     # --------------------------------------------------
     # KPI CARD
@@ -303,7 +352,7 @@ class main_page:
     ):
 
         with ui.card().classes(
-            "w-60 rounded-2xl shadow-xl "
+            "flex-1 min-w-[200px] rounded-2xl shadow-xl "
             "border border-slate-200 bg-white"
         ):
 
@@ -330,319 +379,47 @@ class main_page:
             elif ref_name == "cols":
                 self.lbl_cols = label
 
-    # --------------------------------------------------
-    # PREVIEW
-    # --------------------------------------------------
-    def render_preview(self):
+    def get_files_matrix(self):
 
-        if self.preview_container is None:
-            return
+        files_obj = self.storage_container.get("files", {})
+        parsed_cache = self.storage_container.get("parsed_cache", {})
 
-        self.preview_container.clear()
+        rows_data = []
 
-        rows = self.storage_container.get(
-            "df_json",
-            [],
-        )[:10]
+        for filename in files_obj.keys():
 
-        columns = self.storage_container.get(
-            "df_columns",
-            [],
-        )
+            records = parsed_cache.get(filename, [])
+            num_rows = len(records)
 
-        with self.preview_container:
+            if num_rows > 0:
 
-            if not rows or not columns:
+                num_cols = len(records[0])
 
-                with ui.card().classes(
-                    "w-full rounded-2xl shadow-lg bg-white"
-                ):
-                    ui.label(
-                        "No dataset loaded yet."
-                    ).classes(
-                        "text-slate-500"
-                    )
-                return
+                try:
+                    df = pd.DataFrame(records)
+                    memory_bytes = df.memory_usage(deep=True).sum()
+                    memory_mb = round(memory_bytes / (1024 * 1024), 2)
 
-            cols = []
+                except Exception:
+                    memory_mb = 0.0
 
-            for c in columns:
-                cols.append(
-                    {
-                        "name": c,
-                        "label": c,
-                        "field": c,
-                        "align": "left",
-                    }
-                )
+            else:
 
-            with ui.card().classes(
-                "w-full rounded-2xl shadow-lg bg-white"
-            ):
+                num_cols = 0
+                memory_mb = 0.0
 
-                ui.label(
-                    "Dataset Preview (Top 10 Rows)"
-                ).classes(
-                    "text-xl font-bold mb-4"
-                )
-
-                ui.table(
-                    rows=rows,
-                    columns=cols,
-                    row_key=columns[0],
-                    pagination=10,
-                ).classes("w-full")
-
-    # --------------------------------------------------
-    # RESULT PANEL
-    # --------------------------------------------------
-    def show_ai_result(
-        self,
-        title,
-        lines,
-    ):
-
-        if self.ai_result_container is None:
-            return
-
-        self.ai_result_container.clear()
-
-        with self.ai_result_container:
-
-            with ui.card().classes(
-                "w-full rounded-2xl shadow-lg bg-white"
-            ):
-
-                ui.label(title).classes(
-                    "text-xl font-bold mb-3"
-                )
-
-                for line in lines:
-                    ui.label(str(line)).classes(
-                        "text-slate-700"
-                    )
-
-    # --------------------------------------------------
-    # AI ACTIONS
-    # --------------------------------------------------
-    def ai_summary(self):
-
-        df = storage_to_df(
-            self.storage_container
-        )
-
-        self.show_ai_result(
-            "Dataset Summary",
-            summarize_df(df),
-        )
-
-    def ai_anomalies(self):
-
-        df = storage_to_df(
-            self.storage_container
-        )
-
-        self.show_ai_result(
-            "Anomaly Detection",
-            detect_anomalies(df),
-        )
-
-    def ai_clean(self):
-
-      df = storage_to_df(self.storage_container)
-  
-      if df is None or df.empty:
-          self.show_ai_result(
-              "Cleaning Complete",
-              ["No dataset loaded."]
-          )
-          return
-  
-      # ------------------------------------------------
-      # STEP 1: Convert blanks to NaN
-      # ------------------------------------------------
-      df = df.replace(r'^\s*$', pd.NA, regex=True)
-  
-      # ------------------------------------------------
-      # STEP 2: Remove empty rows
-      # ------------------------------------------------
-      before_rows = len(df)
-      df = df.dropna(axis=0, how="all")
-  
-      # ------------------------------------------------
-      # STEP 3: Remove empty columns
-      # ------------------------------------------------
-      before_cols = len(df.columns)
-      df = df.dropna(axis=1, how="all")
-  
-      # ------------------------------------------------
-      # STEP 4: Shift row values left
-      # ------------------------------------------------
-      rows = []
-  
-      for _, row in df.iterrows():
-          vals = [x for x in row.tolist() if pd.notna(x)]
-          vals += [pd.NA] * (len(df.columns) - len(vals))
-          rows.append(vals)
-  
-      df = pd.DataFrame(rows, columns=df.columns)
-  
-      # ------------------------------------------------
-      # STEP 5: Fill remaining blanks
-      # ------------------------------------------------
-      df = df.fillna("")
-  
-      # ------------------------------------------------
-      # SAVE BACK
-      # ------------------------------------------------
-      save_df_to_storage(
-          df,
-          self.storage_container
-      )
-  
-      self.refresh_dashboard()
-  
-      removed_rows = before_rows - len(df)
-      removed_cols = before_cols - len(df.columns)
-  
-      self.show_ai_result(
-          "Cleaning Complete",
-          [
-              f"Removed empty rows: {removed_rows}",
-              f"Removed empty columns: {removed_cols}",
-              "Shifted values left",
-              "Blank cells cleaned",
-              "Dashboard refreshed"
-          ]
-      )
-
-    def ai_visualizer(self):
-        AutoVisualizer(
-            self.storage_container
-        ).render()
-
-    def ai_recommendations(self):
-
-        lines = recommend_from_storage(
-            self.storage_container
-        )
-
-        self.show_ai_result(
-            "Smart Recommendations",
-            lines,
-        )
-
-    def ai_forecast(self):
-
-        result = ask_forecast(
-            "forecast next 10",
-            self.storage_container,
-        )
-
-        self.show_ai_result(
-            result["title"],
-            result["lines"],
-        )
-
-    def ai_report(self):
-
-        result = ask_report(
-            self.storage_container
-        )
-
-        self.show_ai_result(
-            result["title"],
-            result["lines"],
-        )
-
-    # --------------------------------------------------
-    # CHAT
-    # --------------------------------------------------
-    def render_chat_history(self):
-
-        if self.chat_messages_container is None:
-            return
-
-        self.chat_messages_container.clear()
-
-        with self.chat_messages_container:
-
-            for role, msg in self.chat_history:
-
-                align = (
-                    "justify-end"
-                    if role == "user"
-                    else "justify-start"
-                )
-
-                bubble = (
-                    "bg-blue-600 text-white"
-                    if role == "user"
-                    else
-                    "bg-white text-slate-800 "
-                    "border border-slate-200"
-                )
-
-                with ui.row().classes(
-                    f"w-full {align}"
-                ):
-
-                    ui.markdown(msg).classes(
-                        f"max-w-[75%] px-4 py-3 "
-                        f"rounded-2xl shadow {bubble}"
-                    )
-
-    def run_copilot(self):
-
-        if self.chat_input is None:
-            return
-
-        prompt = self.chat_input.value.strip()
-
-        if prompt == "":
-            ui.notify(
-                "Type a question first",
-                type="warning",
-            )
-            return
-
-        self.chat_history.append(
-            ("user", prompt)
-        )
-
-        self.render_chat_history()
-
-        low = prompt.lower()
-
-        if "forecast" in low:
-            result = ask_forecast(
-                prompt,
-                self.storage_container,
+            rows_data.append(
+                {
+                    "filename": filename,
+                    "rows": num_rows,
+                    "cols": num_cols,
+                    "memory": memory_mb,
+                }
             )
 
-        elif "report" in low:
-            result = ask_report(
-                self.storage_container
-            )
+        return rows_data
 
-        else:
-            result = ask_ai(
-                prompt,
-                self.storage_container,
-            )
 
-        answer = "\n".join(
-            [str(x) for x in result["lines"]]
-        )
-
-        self.chat_history.append(
-            ("ai", answer)
-        )
-
-        self.render_chat_history()
-
-        self.chat_input.value = ""
-        self.chat_input.update()
 
     # --------------------------------------------------
     # SQL CONSOLE
@@ -905,7 +682,7 @@ class main_page:
                     ).props("fit=contain")
 
             with ui.row().classes(
-                "w-full gap-4 flex-wrap"
+                "w-full gap-4 flex-wrap items-stretch"
             ):
 
                 self.stat_card(
@@ -933,14 +710,21 @@ class main_page:
                 )
 
                 with ui.card().classes(
-                    "w-72 rounded-2xl shadow-xl bg-white"
+                    "flex-1 min-w-[200px] rounded-2xl shadow-xl "
+                    "border border-slate-200 bg-white"
                 ):
 
-                    ui.label(
-                        "Last Loaded File"
-                    ).classes(
-                        "text-sm text-slate-500"
-                    )
+                    with ui.row().classes(
+                        "w-full items-center justify-between"
+                    ):
+                        ui.label(
+                            "Last Loaded File"
+                        ).classes(
+                            "text-sm text-slate-500"
+                        )
+                        ui.icon("event_note").classes(
+                            "text-2xl text-orange-600"
+                        )
 
                     self.lbl_last = ui.label(
                         last_file
@@ -949,136 +733,53 @@ class main_page:
                     )
 
             with ui.card().classes(
-                "w-full rounded-2xl shadow-lg bg-white"
+                "w-full rounded-2xl shadow-lg border border-slate-200 bg-white p-6"
             ):
 
                 ui.label(
-                    "Quick Actions"
+                    "Loaded Datasets Matrix"
                 ).classes(
-                    "text-xl font-bold mb-4"
+                    "text-xl font-bold mb-4 text-slate-800"
                 )
 
-                with ui.row().classes(
-                    "gap-3 flex-wrap"
-                ):
+                columns = [
+                    {
+                        "name": "filename",
+                        "label": "File Name",
+                        "field": "filename",
+                        "sortable": True,
+                        "align": "left",
+                    },
+                    {
+                        "name": "rows",
+                        "label": "Number of Rows",
+                        "field": "rows",
+                        "sortable": False,
+                        "align": "right",
+                    },
+                    {
+                        "name": "cols",
+                        "label": "Number of Columns",
+                        "field": "cols",
+                        "sortable": False,
+                        "align": "right",
+                    },
+                    {
+                        "name": "memory",
+                        "label": "Memory Footprint (MBs)",
+                        "field": "memory",
+                        "sortable": True,
+                        "align": "right",
+                    },
+                ]
 
-                    ui.button(
-                        "Refresh",
-                        icon="refresh",
-                        on_click=self.refresh_dashboard,
-                    )
+                self.files_table = ui.table(
+                    columns=columns,
+                    rows=self.get_files_matrix(),
+                    row_key="filename",
+                ).classes("w-full")
 
-                    ui.button(
-                        "Charts",
-                        icon="bar_chart",
-                        on_click=self.ai_visualizer,
-                    )
 
-                    ui.button(
-                        "Forecast",
-                        icon="timeline",
-                        on_click=self.ai_forecast,
-                    )
-
-                    ui.button(
-                        "Report",
-                        icon="description",
-                        on_click=self.ai_report,
-                    )
-
-                    ui.button(
-                        "Recommendations",
-                        icon="auto_awesome",
-                        on_click=self.ai_recommendations,
-                    )
-
-            self.preview_container = ui.column().classes(
-                "w-full"
-            )
-            self.render_preview()
-
-            with ui.card().classes(
-                "w-full rounded-2xl shadow-lg bg-white"
-            ):
-
-                ui.label(
-                    "AI Assistant"
-                ).classes(
-                    "text-xl font-bold mb-4"
-                )
-
-                with ui.row().classes(
-                    "gap-3 flex-wrap"
-                ):
-
-                    ui.button(
-                        "Summary",
-                        icon="smart_toy",
-                        on_click=self.ai_summary,
-                    )
-
-                    ui.button(
-                        "Anomalies",
-                        icon="warning",
-                        on_click=self.ai_anomalies,
-                    )
-
-                    ui.button(
-                        "Clean",
-                        icon="cleaning_services",
-                        on_click=self.ai_clean,
-                    )
-
-                    ui.button(
-                        "Forecast",
-                        icon="timeline",
-                        on_click=self.ai_forecast,
-                    )
-
-                    ui.button(
-                        "Report",
-                        icon="description",
-                        on_click=self.ai_report,
-                    )
-
-            with ui.card().classes(
-                "w-full rounded-2xl shadow-lg bg-white"
-            ):
-
-                ui.label(
-                    "AI Copilot Chat"
-                ).classes(
-                    "text-xl font-bold mb-4"
-                )
-
-                self.chat_messages_container = ui.column().classes(
-                    "w-full gap-3 mb-4 max-h-[500px] overflow-auto"
-                )
-
-                with ui.row().classes(
-                    "w-full gap-3 items-center"
-                ):
-
-                    self.chat_input = ui.input(
-                        placeholder="Ask anything..."
-                    ).classes(
-                        "flex-1"
-                    ).props("outlined")
-
-                    self.chat_input.on(
-                        "keydown.enter",
-                        lambda e: self.run_copilot()
-                    )
-
-                    ui.button(
-                        "Send",
-                        icon="send",
-                        on_click=self.run_copilot,
-                    )
-
-            self.ai_result_container = ui.column().classes(
-                "w-full"
-            )
 
     # --------------------------------------------------
     # CONTENT
@@ -1203,46 +904,52 @@ class main_page:
                         self.dashboard()
 
                     with ui.tab_panel("load"):
-                        page = load_gui.loadgui(
+                        self.load_page = load_gui.loadgui(
                             config=self.config_,
                             storage_container=self.storage_container,
-                            dirs=self.dirs
+                            dirs=self.dirs,
+                            parent=self
                         )
-                        page.content_()
+                        self.load_page.content_()
 
                     with ui.tab_panel("merge"):
-                        page = merge_gui.mergegui(
+                        self.merge_page = merge_gui.mergegui(
                             config=self.config_,
                             storage_container=self.storage_container,
+                            parent=self
                         )
-                        page.content_()
+                        self.merge_page.content_()
 
                     with ui.tab_panel("calculate"):
-                        page = calculate_gui.calculategui(
+                        self.calculate_page = calculate_gui.calculategui(
                             config=self.config_,
                             storage_container=self.storage_container,
+                            parent=self
                         )
-                        page.content_()
+                        self.calculate_page.content_()
 
                     with ui.tab_panel("plot"):
-                        page = plot_gui.plotgui(
+                        self.plot_page = plot_gui.plotgui(
                             config=self.config_,
                             storage_container=self.storage_container,
+                            parent=self
                         )
-                        page.content_()
+                        self.plot_page.content_()
 
                     with ui.tab_panel("metadata"):
-                        page = metadata_gui.NewProtocol(
-                            storage_container=self.storage_container
+                        self.metadata_page = metadata_gui.NewProtocol(
+                            storage_container=self.storage_container,
+                            parent=self
                         )
-                        page.content_()
+                        self.metadata_page.content_()
 
                     with ui.tab_panel("llm"):
-                        page = llm_gui.LlmGui(
+                        self.llm_page = llm_gui.LlmGui(
                             config=self.config_,
                             storage_container=self.storage_container,
+                            parent=self
                         )
-                        page.content_()
+                        self.llm_page.content_()
 
                   #  if self.is_admin():
                   #      with ui.tab_panel("sql_console"):
