@@ -1,7 +1,7 @@
 site_name: raw2ready
-site_description: Enterprise AI Data Cleaning and Analysis framework for bioreactor datasets
-site_author: Athena RC / WUR
-site_url: https://athena-rc.github.io/raw2ready/
+site_description: Bioprocess Data Curation Platform with AI-Assisted Exploration
+site_author: Georgakilas Lab / Athena RC
+site_url: https://GeorgakilasLab.github.io/raw2ready/
 
 theme:
   name: material
