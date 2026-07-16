@@ -185,7 +185,7 @@ class helpgui:
                     with ui.column():
 
                         ui.label(
-                            "Raw2Ready Help Center"
+                            "raw2ready Help Center"
                         ).classes(
                             "text-4xl font-bold"
                         )
@@ -197,7 +197,7 @@ class helpgui:
                         )
 
                         ui.label(
-                            "Version 2026 Enterprise Edition"
+                            "Version 2026"
                         ).classes(
                             "text-sm opacity-80 mt-4"
                         )
@@ -473,7 +473,7 @@ class helpgui:
             ):
 
                 ui.label(
-                    "Raw2Ready Help Center Enterprise Edition 2026"
+                    "raw2ready Help Center 2026"
                 ).classes(
                     "text-sm text-slate-500"
                 )

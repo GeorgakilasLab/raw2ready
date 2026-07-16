@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 170" width="100%" height="100%" style="overflow: visible;">
+  <!-- Definition for the soft teal/blue gradient -->
+  <defs>
+    <linearGradient id="readyGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#4FD1C5" />
+      <stop offset="100%" stop-color="#63B3ED" />
+    </linearGradient>
+  </defs>
+
+  <!-- Background: Explicit pixel dimensions prevent clipping in external viewers -->
+  <rect x="0" y="0" width="760" height="170" fill="#F8FAFC" rx="16"/>
+
+  <!-- LEFT MARK: "Raw" Data (Unstructured, soft grays) -->
+  <g fill="#94A3B8">
+    <circle cx="60" cy="70" r="10" opacity="0.4"/>
+    <circle cx="100" cy="55" r="7" opacity="0.6"/>
+    <circle cx="45" cy="105" r="12" opacity="0.5"/>
+    <circle cx="115" cy="115" r="9" opacity="0.3"/>
+    <circle cx="80" cy="130" r="6" opacity="0.7"/>
+    <circle cx="90" cy="90" r="5" opacity="0.8"/>
+  </g>
+
+  <!-- CENTER: The Transformation (Subtle arrow perfectly centered in the gap) -->
+  <path d="M 155 85 L 195 85" stroke="#CBD5E1" stroke-width="6" stroke-linecap="round"/>
+  <path d="M 180 70 L 197 85 L 180 100" stroke="#CBD5E1" stroke-width="6" stroke-linecap="round" fill="none" stroke-linejoin="round"/>
+
+  <!-- RIGHT MARK: "Ready" Data (Structured 3x3 grid, vibrant gradient) -->
+  <g fill="url(#readyGrad)">
+    <circle cx="235" cy="50" r="9"/>
+    <circle cx="270" cy="50" r="9"/>
+    <circle cx="305" cy="50" r="9"/>
+    <circle cx="235" cy="85" r="9"/>
+    <circle cx="270" cy="85" r="9"/>
+    <circle cx="305" cy="85" r="9"/>
+    <circle cx="235" cy="120" r="9"/>
+    <circle cx="270" cy="120" r="9"/>
+    <circle cx="305" cy="120" r="9"/>
+  </g>
+
+  <!-- TYPOGRAPHY: Baseline explicitly aligned with the visual center of the icons -->
+  <text x="340" y="112" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif" font-size="80" font-weight="700" letter-spacing="-2">
+    <tspan fill="#64748B">raw</tspan><tspan fill="url(#readyGrad)">2ready</tspan>
+  </text>
+</svg>

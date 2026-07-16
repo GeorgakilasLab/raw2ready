@@ -282,7 +282,7 @@ def build_system_prompt(df: pd.DataFrame):
     context = dataframe_context(df)
 
     system = f"""
-You are Raw2Ready Industrial AI Copilot.
+You are raw2ready AI Copilot.
 
 You are an elite expert in:
 

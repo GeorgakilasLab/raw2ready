@@ -73,7 +73,7 @@ class main_page:
         self,
         config: dict,
         page_url_path="/",
-        frame_name="Raw2Ready",
+        frame_name="raw2ready",
         add_page=False,
         storage_container=None,
         dirs=None,
@@ -83,7 +83,7 @@ class main_page:
         Args:
             config: Config dictionary containing environment/analytical parameters.
             page_url_path: Route URL path. Defaults to "/".
-            frame_name: Title of UI layout frame. Defaults to "Raw2Ready".
+            frame_name: Title of UI layout frame. Defaults to "raw2ready".
             add_page: Whether to automatically register the route page. Defaults to False.
             storage_container: Optional storage dictionary container.
             dirs: Optional dictionary containing upload/output paths.
@@ -887,22 +887,22 @@ class main_page:
                     with ui.column():
 
                         ui.label(
-                            "Raw2Ready AI Analytics Center"
+                            "raw2ready"
                         ).classes(
                             "text-4xl font-bold"
                         )
 
                         ui.label(
-                            "Enterprise Industrial Intelligence Platform"
+                            "Bioprocess Data Curation Platform with AI-Assisted Exploration"
                         ).classes(
                             "text-lg opacity-90"
                         )
 
                     ui.image(
-                        "/assets/images/project_logo.jpg"
+                        "/assets/images/raw2ready.svg"
                     ).classes(
-                        "w-24 h-24 rounded-2xl bg-white p-2"
-                    )
+                        "w-72 h-16 rounded-2xl bg-white p-2"
+                    ).props("fit=contain")
 
             with ui.row().classes(
                 "w-full gap-4 flex-wrap"
@@ -1126,46 +1126,16 @@ class main_page:
             ):
 
                 with ui.row().classes(
-                    "items-center gap-3 mb-4"
+                    "items-center gap-3 mb-4 w-full justify-center"
                 ):
 
                     ui.image(
-                        "/assets/images/project_logo.jpg"
+                        "/assets/images/raw2ready.svg"
                     ).classes(
-                        "w-14 h-14 rounded-xl"
-                    )
-
-                    with ui.column():
-
-                        ui.label(
-                            "Raw2Ready"
-                        ).classes(
-                            "text-xl font-bold"
-                        )
-
-                        ui.label(
-                            "Data Platform"
-                        ).classes(
-                            "text-xs text-slate-300"
-                        )
+                        "w-full h-14"
+                    ).props("fit=contain")
 
                 ui.separator()
-
-            #    ui.label(
-            #        f"User: {self.current_user()} ({self.current_role()})"
-            #    ).classes(
-            #        "text-xs text-cyan-300 mt-2 mb-2"
-            #    )
-
-                ui.button(
-                    "Logout",
-                    icon="logout",
-                    color="negative",
-                    on_click=lambda: (
-                        auth.logout_user(),
-                        ui.navigate.to("/login"),
-                    ),
-                ).classes("w-full mb-3")
 
                 with ui.scroll_area().classes(
                     "w-full flex-1"

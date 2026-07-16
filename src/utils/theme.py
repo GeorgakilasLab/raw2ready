@@ -12,7 +12,7 @@ from nicegui.element import Element
 from src.utils.fonts_ import font_header, title, subheader, body_text
 
 
-configuration_filepath = './config/config.yaml'
+configuration_filepath = './src/config/config.yaml'
 config_content, config_content_dump = tools.load_config(configuration_filepath)
 
 

@@ -1,7 +1,7 @@
 # general application settings
 general_settings:
   project_name: BioIndustry4.0
-  project_logo: assets/images/3.png
+  project_logo: assets/images/raw2ready.svg
   project_logo_size: 'height: 700px; width: 700px'
   app_title: 'Data Cleaner'
   software_name: 'legacy2leaf'

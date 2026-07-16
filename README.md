@@ -207,7 +207,7 @@ python3 -c "import nltk; nltk.download(['punkt', 'stopwords', 'wordnet', 'omw-1.
 To start the NiceGUI web interface, run the entry script:
 
 ```bash
-python3 run_app.py
+python run_app.py
 ```
 
 Then, open your browser and navigate to:
