@@ -1,0 +1,50 @@
+# general application settings
+general_settings:
+  project_name: BioIndustry4.0
+  project_logo: assets/images/3.png
+  project_logo_size: 'height: 700px; width: 700px'
+  app_title: 'Data Cleaner'
+  software_name: 'legacy2leaf'
+  funding_logo: 'assets/images/EN-Funded by the EU-POS.png' #'assets/images/EN-Funded by the EU-POS.png'
+  organisation_logo: 'assets/images/WUR_ZW_standard_2021.png'
+
+
+# theme such as color application settings
+theme_settings:
+  header:
+    header_text: false
+  footer:
+    footer_funding_logo_width: 120
+    footer_funding_logo_height: 30
+    footer_organisation_logo_width: 80
+    footer_organisation_logo_height: 30
+  color_primary: 
+    value: '#545454'
+    description: 'dark gray 4'
+  color_secondary:
+    value: '#ff9538'
+    description: 'dark orange 1'
+  color_accent: 
+    value: '#f6f6f6'
+    description: 'light gray 3'
+  color_positive:
+    value: '#f6f6f6'
+    description: 'light gray 3'
+
+
+# menus enabled
+menus:
+  home: true
+  load: true
+  parse: true
+  merge: true
+  calculate: true
+  plot: true
+  upload: true
+  protocol: true
+
+
+
+upload:
+  send_to_leaf: true
+  send_to_seek: true

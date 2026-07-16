@@ -1,0 +1,211 @@
+Verb ID,Category,Verb,Description,Prompt ID,Duplicate,Comment,Additional information
+1,Actions for Manipulation & Treatment ,Add, To introduce or apply a substance or element.,1,,,amount; time;
+2,Actions for Manipulation & Treatment ,Apply, To place something onto a surface or subject.,1,,,amount; time;
+3,Actions for Manipulation & Treatment ,Blend, To mix or combine different substances.,1,,,amount; time;
+4,Actions for Manipulation & Treatment ,Calibrate, To adjust an instrument or system for accuracy.,1,,,equipment
+5,Actions for Manipulation & Treatment ,Clean, To remove unwanted materials from a surface or sample.,1,,,process
+6,Actions for Manipulation & Treatment ,Collect," To gather or assemble data, samples, or items.",1,,,amount;
+7,Actions for Manipulation & Treatment ,Combine, To put two or more things together.,1,,,amount; time;
+8,Actions for Manipulation & Treatment ,Control, To regulate or hold a variable constant.,1,,,process
+9,Actions for Manipulation & Treatment ,Culture, To grow microorganisms or cells in a controlled environment.,1,,,amount; time;
+10,Actions for Manipulation & Treatment ,Cut, To divide or separate a material with a sharp tool.,1,,,amount;
+11,Actions for Manipulation & Treatment ,Dissolve, To cause a substance to become incorporated into a liquid.,1,,,amount; time;
+12,Actions for Manipulation & Treatment ,Dry, To remove moisture from something.,1,,,time; 
+13,Actions for Manipulation & Treatment ,Extract, To remove or take out a substance.,1,,,amount; time;
+14,Actions for Manipulation & Treatment ,Filter, To pass a liquid or gas through a filter to remove impurities.,1,,,amount; time;
+15,Actions for Manipulation & Treatment ,Heat, To raise the temperature of something.,1,,,amount; time;
+16,Actions for Manipulation & Treatment ,Incubate, To keep something in specific conditions to promote growth or development.,1,,,amount; time;
+17,Actions for Manipulation & Treatment ,Inject, To force a fluid into something.,1,,,amount;
+18,Actions for Manipulation & Treatment ,Isolate, To separate a substance or group for specific study.,1,,,amount;
+19,Actions for Manipulation & Treatment ,Label, To identify or mark a sample or component.,1,,,sample
+20,Actions for Manipulation & Treatment ,Measure," To determine the size, amount, or degree of something.",1,,,amount; time;
+21,Actions for Manipulation & Treatment ,Mix, To combine or stir different substances.,1,,,amount; time;
+22,Actions for Manipulation & Treatment ,Observe, To watch or monitor something carefully.,1,,,process
+23,Actions for Manipulation & Treatment ,Operate, To perform an action or process with a device or system.,1,,,process
+24,Actions for Manipulation & Treatment ,Pour, To cause a liquid to flow from a container.,1,,,amount; time;
+25,Actions for Manipulation & Treatment ,Press, To apply force or pressure.,1,,,amount; time;
+26,Actions for Manipulation & Treatment ,Produce, To create or bring something into existence.,1,,,other
+27,Actions for Manipulation & Treatment ,Record, To keep a written or electronic account of something.,1,,,other
+28,Actions for Manipulation & Treatment ,Refrigerate, To cool something down to a low temperature.,1,,,amount; time;
+29,Actions for Manipulation & Treatment ,Remove, To take something away from a place or position.,1,,,amount;
+30,Actions for Manipulation & Treatment ,Repeat, To perform an action again.,1,,,other
+31,Actions for Manipulation & Treatment ,Sample, To take a small representative part of a larger quantity.,1,,,amount;
+32,Actions for Manipulation & Treatment ,Separate, To divide or move things apart.,1,,,amount;
+33,Actions for Manipulation & Treatment ,Soak, To immerse something in a liquid.,1,,,amount; time;
+34,Actions for Manipulation & Treatment ,Spin, To rotate something rapidly.,1,,,amount; time;
+35,Actions for Manipulation & Treatment ,Store, To keep something for future use.,1,,,amount; time;
+36,Actions for Manipulation & Treatment ,Stir, To move a liquid or powder in a circular motion.,1,,,amount; time;
+37,Actions for Manipulation & Treatment ,Synthesize, To create a chemical compound.,1,,dual meaning,other
+38,Actions for Manipulation & Treatment ,Transfer, To move something from one place or object to another.,1,,,amount;
+39,Actions for Manipulation & Treatment ,Treat, To apply a specific process or substance to something.,1,,,amount; time;
+40,Actions for Manipulation & Treatment ,Vary, To change something.,1,,,other
+41,Actions for Manipulation & Treatment ,Wash, To clean with water or another liquid.,1,,,other
+42,Actions for Manipulation & Treatment ,Weigh, To determine the weight of something.,1,,,other
+43,Actions for Data & Analysis ,Analyze, To examine something in detail.,1,,,other
+44,Actions for Data & Analysis ,Categorize, To place things into groups or categories.,1,,,other
+45,Actions for Data & Analysis ,Compare, To note the similarities and differences between two or more things.,1,,,other
+46,Actions for Data & Analysis ,Compile, To gather information into a list or report.,1,,,other
+47,Actions for Data & Analysis ,Conclude, To form a judgment based on evidence or reasoning.,1,,,other
+48,Actions for Data & Analysis ,Confirm, To establish the truth or correctness of something.,1,,,other
+49,Actions for Data & Analysis ,Count, To determine the number of things.,1,,,other
+50,Actions for Data & Analysis ,Differentiate, To recognize or find the difference between things.,1,,,other
+51,Actions for Data & Analysis ,Evaluate, To assess the significance or worth of something.,1,,,other
+52,Actions for Data & Analysis ,Examine, To inspect something in detail.,1,,,other
+53,Actions for Data & Analysis ,Hypothesize, To propose a testable explanation.,1,,,other
+54,Actions for Data & Analysis ,Identify, To recognize or establish the identity of someone or something.,1,,,other
+55,Actions for Data & Analysis ,Interpret, To explain the meaning of information.,1,,,other
+56,Actions for Data & Analysis ,List, To make a list of items.,1,,,other
+57,Actions for Data & Analysis ,Quantify, To express or measure something in numerical terms.,1,,,other
+58,Actions for Data & Analysis ,Record, To write down or save information.,1,TRUE,,other
+59,Actions for Data & Analysis ,Synthesize, To combine information from different sources to create a new whole,1,,dual meaning,other
+60,Verbs for Manipulation & Treatment ,Apply, To put something into action or use; to make use of.,2,TRUE,,other
+61,Verbs for Manipulation & Treatment ,Adjust, To alter or move something slightly in order to achieve a desired fit or position.,2,,,other
+62,Verbs for Manipulation & Treatment ,Administer, To give or provide.,2,,,amount;
+63,Verbs for Manipulation & Treatment ,Introduce, To bring into use or operation.,2,,,other
+64,Verbs for Manipulation & Treatment ,Immerse, To submerge completely.,2,,,other
+65,Verbs for Manipulation & Treatment ,Expose, To make (something) visible by uncovering it.,2,,,time; 
+66,Verbs for Manipulation & Treatment ,Treat, To subject someone or something to.,2,TRUE,,amount; time;
+67,Verbs for Manipulation & Treatment ,Irradiate, To subject to radiation.,2,,,other
+68,Verbs for Measurement & Observation,Measure," To ascertain the size, amount, or degree of something. ",2,TRUE,,amount; time;
+69,Verbs for Measurement & Observation,Observe, To notice or perceive (something) directly.,2,TRUE,,other
+70,Verbs for Measurement & Observation,Record, To set down in writing or other permanent form. ,2,TRUE,,other
+71,Verbs for Measurement & Observation,Analyze, To examine methodically and in detail the constitution or structure of. ,2,TRUE,,other
+72,Verbs for Measurement & Observation,Quantify, To express or measure the quantity of.,2,TRUE,,other
+73,Verbs for Measurement & Observation,Monitor, To observe and check the progress or quality of something over a period of time.,2,,,other
+74,Verbs for Separation & Preparation ,Filter, To pass a liquid or gas through a filter in order to remove impurities.,2,TRUE,,amount; time;
+75,Verbs for Separation & Preparation ,Sieve, To pass something through a sieve.,2,,,amount;
+76,Verbs for Separation & Preparation ,Centrifuge, To separate (a substance) into components by spinning it in a centrifuge.,2,,,amount; time;
+77,Verbs for Separation & Preparation ,Extract," To remove or take out, especially by effort or force.",2,TRUE,,amount; time;
+78,Verbs for Separation & Preparation ,Dry, To make dry by removing moisture.,2,TRUE,,time; 
+79,Verbs for Control & Design ,Control, To determine the behavior or supervise the running of.,2,TRUE,,other
+80,Verbs for Control & Design ,Isolate, To cause (a person or place) to be separate.,2,TRUE,,amount;
+81,Verbs for Control & Design ,Randomize," To assign (subjects, treatments, or other items) randomly.",2,,,other
+82,Verbs for Control & Design ,Assign, To designate (a task or duty) to someone.,2,,,other
+83,Verbs for Control & Design ,Define," To state or describe exactly the nature, scope, or meaning of.",2,,,other
+84,Verbs for Control & Design ,Hypothesize, To form a hypothesis or theory about.,2,TRUE,,other
+85,Other Key Verbs ,Heat, To make or become hot.,2,TRUE,,amount; time;
+86,Other Key Verbs ,Cool, To make or become cool.,2,,,amount; time;
+87,Other Key Verbs ,Cut," To penetrate, divide, or separate with a sharp-edged tool or implement.",2,TRUE,,amount;
+88,Other Key Verbs ,Mix, To combine or put together to form one substance or mass.,2,TRUE,,amount; time;
+89,Other Key Verbs ,Dissolve, To cause to disappear into a liquid.,2,TRUE,,amount; time;
+90,Other Key Verbs ,Incubate, To keep (eggs or a disease) in suitable conditions for hatching or development.,2,TRUE,,amount; time;
+91,Experimental methodology,Define, To establish the scope and parameters of the experiment and identify the variables. ,3,TRUE,,other
+92,Experimental methodology,Hypothesize, To formulate a testable prediction about the outcome of the experiment. ,3,TRUE,,other
+93,Experimental methodology,Design, To create the plan and set of procedures for conducting the experiment. ,3,,,other
+94,Experimental methodology,Control, To manage and minimize the influence of extraneous variables on the experiment's outcome. ,3,TRUE,,other
+95,Experimental methodology,Manipulate, To intentionally change or vary the independent variable(s) to observe its effect. ,3,,,other
+96,Experimental methodology,Assign, To allocate participants to different experimental or control groups. ,3,TRUE,,other
+97,Experimental methodology,Sieve," To separate materials based on size or other properties, a common method in certain scientific fields. ",3,TRUE,,amount;
+98,Experimental methodology,Measure, To quantify the dependent variable to determine the effects of the independent variable. ,3,TRUE,,amount; time;
+99,Experimental methodology,Analyze, To examine and interpret the collected data to identify patterns and relationships. ,3,TRUE,,other
+100,Experimental methodology,Observe," To watch and record phenomena as they occur, which can be part of data collection. ",3,TRUE,,other
+101,Experimental methodology,Compare, To contrast the results from different experimental groups or conditions.,3,TRUE,,other
+102,Experimental methodology,Document," To record all experimental procedures, materials, and results in detail. ",3,,,other
+103,Experimental methodology,Validate, To confirm the accuracy and reliability of the experimental results and conclusions.,3,,,other
+104,Experimental methodology,Refine, To improve the experimental design or procedure based on initial results or identified limitations. ,3,,,other
+105,Experimental Process,Administer, To provide something (like a treatment or survey) to participants.,4,TRUE,,other
+106,Experimental Process,Analyze," To examine data to identify patterns, trends, and relationships.",4,TRUE,,other
+107,Experimental Process,Assign, To place participants into specific groups or conditions.,4,TRUE,,other
+108,Experimental Process,Calculate, To determine a numerical value using specific methods.,4,,,other
+109,Experimental Process,Collect, To gather data from sources or participants.,4,TRUE,,amount;
+110,Experimental Process,Control, To hold certain variables constant to ensure they do not influence the outcome.,4,TRUE,,other
+111,Experimental Process,Create," To produce something new, like a hypothesis or experimental setup.",4,,,other
+112,Experimental Process,Determine, To find out or establish something precisely.,4,,,other
+113,Experimental Process,Develop, To create or formulate something over time.,4,,,other
+114,Experimental Process,Design, To plan the structure of the experiment.,4,TRUE,,other
+115,Experimental Process,Implement, To put the planned experiment into action.,4,,,other
+116,Experimental Process,Include, To incorporate specific elements or methods into the design.,4,,,other
+117,Experimental Process,Influence, To exert an effect on something (often an independent variable).,4,,,other
+118,Experimental Process,Measure, To quantify a dependent variable.,4,TRUE,,amount; time;
+119,Experimental Process,Manipulate, To change an independent variable to see its effect.,4,TRUE,,other
+120,Experimental Process,Obtain," To acquire or get something, like data or results.",4,,,other
+121,Experimental Process,Observe, To notice and record events or phenomena in the experimental setting.,4,TRUE,,other
+122,Experimental Process,Perform, To carry out an action or procedure.,4,,,other
+123,Experimental Process,Randomize, To assign participants or conditions randomly.,4,TRUE,,other
+124,Experimental Process,Record, To write down or document data or observations.,4,TRUE,,other
+125,Experimental Process,Select, To choose specific participants or items for the experiment.,4,,,other
+126,Experimental Process,Synthesize, To combine different elements into a coherent whole.,4,TRUE,dual meaning,other
+127,Experimental Process,Test, To conduct an experiment to assess a hypothesis or measure effects.,4,,,other
+128,Experimental Process,Use," To employ a particular tool, method, or material.",4,,,other
+129,Verbs for Describing and Justifying Methods,Appraise, To evaluate the quality or significance of a method.,4,,,other
+130,Verbs for Describing and Justifying Methods,Assess, To make an informed judgment about something.,4,,,other
+131,Verbs for Describing and Justifying Methods,Clarify, To make something clearer or easier to understand.,4,,,other
+132,Verbs for Describing and Justifying Methods,Describe, To provide a detailed account of what was done.,4,,,other
+133,Verbs for Describing and Justifying Methods,Document, To record information formally.,4,TRUE,,other
+134,Verbs for Describing and Justifying Methods,Explain, To provide details or reasons for something.,4,,,other
+135,Verbs for Describing and Justifying Methods,Formulate," To devise or create a statement, theory, or plan.",4,,,other
+136,Verbs for Describing and Justifying Methods,Generate, To produce or create something new.,4,,,other
+137,Verbs for Describing and Justifying Methods,Justify, To show or prove to be right or reasonable.,4,,,other
+138,Verbs for Describing and Justifying Methods,Organize, To arrange elements into a structured order.,4,,,other
+139,Verbs for Describing and Justifying Methods,Report, To give an account of something.,4,,,other
+140,Verbs for Describing and Justifying Methods,Restate, To say or state something again.,4,,,other
+141,Common verbs,Analyze, Examine data to identify patterns and trends.,5,TRUE,,other
+142,Common verbs,Apply, Introduce a treatment or variable.,5,TRUE,,other
+143,Common verbs,Assign, Distribute participants or samples into groups.,5,TRUE,,other
+144,Common verbs,Calibrate, Adjust or standardize instruments for accurate measurement.,5,TRUE,,other
+145,Common verbs,Capture," Collect and store data, such as images or readings.",5,,,other
+146,Common verbs,Categorize, Group or classify data or samples.,5,TRUE,,other
+147,Common verbs,Clamp, Secure or hold something in place.,5,,,other
+148,Common verbs,Collect, Gather raw data.,5,TRUE,,amount;
+149,Common verbs,Combine, Mix different substances or data sets.,5,TRUE,,amount; time;
+150,Common verbs,Compare, Evaluate differences or similarities between data sets.,5,TRUE,,other
+151,Common verbs,Conduct, Carry out an experiment or procedure.,5,,,other
+152,Common verbs,Control, Maintain consistent conditions for other variables.,5,TRUE,,other
+153,Common verbs,Convert, Transform data from one format to another.,5,,,other
+154,Common verbs,Correlate, Determine the relationship between variables.,5,,,other
+155,Common verbs,Count, Determine the number of items or events.,5,TRUE,,other
+156,Common verbs,Create, Produce or generate samples or data.,5,TRUE,,other
+157,Common verbs,Cultivate," Grow biological specimens, such as plants or cells.",5,,,other
+158,Common verbs,Measure," Determine the size, amount, or degree of something.",5,TRUE,,amount; time;
+159,Common verbs,Manipulate, Deliberately change an independent variable.,5,TRUE,,other
+160,Common verbs,Monitor, Observe and record changes over time.,5,TRUE,,other
+161,Common verbs,Obtain, Get or acquire data or samples.,5,TRUE,,other
+162,Common verbs,Observe, Watch carefully for specific details or changes.,5,TRUE,,other
+163,Common verbs,Organize, Arrange data or samples in a systematic way.,5,TRUE,,other
+164,Common verbs,Perform, Execute a specific task or procedure.,5,TRUE,,other
+165,Common verbs,Prepare, Get samples or equipment ready for use.,5,,,other
+166,Common verbs,Quantify, Express something in numerical terms.,5,TRUE,,other
+167,Common verbs,Record, Write down observations or data.,5,TRUE,,other
+168,Common verbs,Regulate, Control the rate or process of something.,5,,,other
+169,Common verbs,Replicate, Repeat an experiment or procedure.,5,,,other
+170,Common verbs,Sample, Take a representative portion of a larger group.,5,TRUE,,other
+171,Common verbs,Separate, Isolate or divide components.,5,TRUE,,other
+172,Common verbs,Sterilize, Eliminate microorganisms from equipment or surfaces.,5,,,amount; time;
+173,Common verbs,Test, Perform a procedure to check for accuracy or effectiveness.,5,TRUE,,other
+174,Common verbs,Track, Follow the movement or changes in something over time.,5,,,other
+175,Common verbs,Validate, Confirm the accuracy or reliability of data or methods.,5,TRUE,,other
+176,Common verbs,Verify, Check that something is true or accurate.,5,,,other
+177,Common verbs,Weigh, Determine the weight of an object or sample.,5,TRUE,,other
+178,Preparing & Setting Up ,Design," (e.g., design an experiment)",6,TRUE,,other
+179,Preparing & Setting Up ,Prepare," (e.g., prepare a solution)",6,TRUE,,other
+180,Preparing & Setting Up ,Assemble," (e.g., assemble the apparatus)",6,,,other
+181,Preparing & Setting Up ,Calibrate," (e.g., calibrate a sensor)",6,TRUE,,other
+182,Preparing & Setting Up ,Measure," (e.g., measure the initial mass)",6,TRUE,,amount; time;
+183,Preparing & Setting Up ,Set," (e.g., set the temperature)",6,,,amount; time;
+184,Preparing & Setting Up ,Adjust," (e.g., adjust the flow rate)",6,TRUE,,other
+185,Preparing & Setting Up ,Record," (e.g., record the baseline data)",6,TRUE,,other
+186,Preparing & Setting Up ,Label," (e.g., label the samples)",6,TRUE,,other
+187,Preparing & Setting Up ,Randomize," (e.g., randomize the order of trials)",6,TRUE,,other
+188,Performing & Collecting Data,Apply," (e.g., apply the treatment)",6,TRUE,,other
+189,Performing & Collecting Data,Administer," (e.g., administer the drug)",6,TRUE,,other
+190,Performing & Collecting Data,Introduce," (e.g., introduce the stimulus)",6,TRUE,,other
+191,Performing & Collecting Data,Monitor," (e.g., monitor the reaction)",6,TRUE,,other
+192,Performing & Collecting Data,Observe," (e.g., observe the plant growth)",6,TRUE,,other
+193,Performing & Collecting Data,Collect," (e.g., collect the samples)",6,TRUE,,amount;
+194,Performing & Collecting Data,Transfer," (e.g., transfer the liquid)",6,TRUE,,amount;
+195,Performing & Collecting Data,Incubate," (e.g., incubate the cell cultures)",6,TRUE,,amount; time;
+196,Performing & Collecting Data,Extract," (e.g., extract the DNA)",6,TRUE,,amount; time;
+197,Performing & Collecting Data,Weigh," (e.g., weigh the final product)",6,TRUE,,other
+198,Analyzing & Concluding,Analyze," (e.g., analyze the results)",6,TRUE,,other
+199,Analyzing & Concluding,Calculate," (e.g., calculate the average)",6,TRUE,,other
+200,Analyzing & Concluding,Compare," (e.g., compare the groups)",6,TRUE,,other
+201,Analyzing & Concluding,Interpret," (e.g., interpret the findings)",6,TRUE,,other
+202,Analyzing & Concluding,Validate," (e.g., validate the hypothesis)",6,TRUE,,other
+203,Analyzing & Concluding,Summarize," (e.g., summarize the key trends)",6,,,other
+204,Analyzing & Concluding,Conclude," (e.g., conclude the experiment)",6,TRUE,,other
+205,Analyzing & Concluding,Report," (e.g., report the data)",6,TRUE,,other
+206,Analyzing & Concluding,Plot," (e.g., plot the data points)",6,,,other
+207,Analyzing & Concluding,Quantify," (e.g., quantify the changes)",6,TRUE,,other
+208,Data collection,Image,To capture visual information as part of the data collection.,,,,other
+209,Data collection,Photograph,To capture visual information as part of the data collection.,,,,other
+210,,Slice,,,,,other
