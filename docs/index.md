@@ -1,18 +1,19 @@
 # raw2ready
 
-**raw2ready** is an enterprise AI-powered data cleaning, merging, and analytics platform designed specifically for bioreactor and bioprocess datasets. Built on top of Python and NiceGUI, it provides an interactive web-based user interface to transform raw, noisy, or disconnected bioreactor CSV/Excel export logs into clean, unified, and ready-to-analyze datasets.
+**raw2ready** is a locally deployed, open-source web app for the harmonization, processing, visualization, semantic annotation, and intelligent exploration of bioprocess data.
+
+The framework automates the transformation of heterogeneous raw data files originating from bioprocess-related devices (e.g., bioreactors, gas analyzers) into standardized, machine-readable datasets through a modular and extensible architecture. It provides an interactive web-based graphical user interface that enables users to perform data curation, preprocessing, visualization, and AI-assisted exploration directly through the browser.
 
 ---
 
 ## Key Features
 
-*   **Interactive Data Loader**: Upload, preview, and validate CSV and Excel bioreactor logs.
-*   **Intelligent Parser**: Parse complex, multi-header spreadsheets, normalize units of measure, and convert timestamp formats automatically.
-*   **Robust Data Merger**: Merge multiple files using row-wise concatenation or column-wise join logic on timestamps or custom keys.
-*   **Custom Expression Evaluator**: Safely calculate new metrics and parameters from existing columns using mathematical formulas.
-*   **Visual Exploration & Forecasting**: Build time-series plots, correlation matrices, and perform linear-regression-based forecasting.
-*   **Multi-Agent AI Copilot**: Talk to specialized local LLM agents (powered by Ollama/Llama3) to query datasets, extract experimental protocols, and search biological databases like BacDive and Crossref.
-*   **Automated Quality Reporting**: Generate comprehensive data quality, outlier detection, and correlation reports.
+- Raw data parsing and harmonization.
+- Time-series synchronization and dataset merging.
+- Dynamic calculation of user-defined variables.
+- Interactive visualization.
+- Metadata annotation using [MIFE](https://doi.org/10.1093/gigascience/giag038).
+- Agentic AI assisted exploration of data, experimental conditions, microbial information ([BacDive](https://bacdive.dsmz.de/)) and literature ([CrossRef](https://www.crossref.org/), [DuckDuckGo](https://duckduckgo.com/)).
 
 ---
 

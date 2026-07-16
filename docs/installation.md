@@ -1,61 +1,64 @@
 # Installation Guide
 
-Follow these steps to set up your development environment and launch the **raw2ready** application.
+Follow these steps to set up your environment and launch the **raw2ready** application.
 
----
+## Manual Deployment (Conda)
 
-## 1. Prerequisites
+You can deploy raw2ready manually using Conda (requires installation of miniconda - see [installation](docs/installation.md)). This creates an isolated virtual environment and installs all dependencies specified in the `conda.yml` configuration.
 
-Ensure you have the following installed on your system:
-*   [Miniconda](https://docs.anaconda.com/miniconda/) or Anaconda.
-*   [Ollama](https://ollama.com/) (optional, required for local AI capabilities).
+### 1. Clone the Repository
 
----
-
-## 2. Set Up the Conda Environment
-
-Initialize and configure the environment using the provided `conda.yml`:
+Download and extract the repository manually, or clone it using Git.
 
 ```bash
-# Clone the repository
 git clone https://github.com/GeorgakilasLab/raw2ready.git
 cd raw2ready
+```
 
-# Create the conda environment
+### 2. Create the Conda Environment
+
+Run the following command in the root of the project to create the `raw2ready` Conda environment:
+
+```bash
 conda env create -f conda.yml
+```
 
-# Activate the environment
+### 3. Activate the Environment
+
+Once the environment has been successfully created, activate it using:
+
+```bash
 conda activate raw2ready
 ```
 
-If you modify or update dependencies, you can manually reinstall them:
-```bash
-pip install -r requirements.txt
-```
+### 4. Launch the Web Application
 
----
-
-## 3. Set Up Ollama (For AI Agents)
-
-The web application leverages local LLM instances via Ollama:
-
-1.  Start the Ollama server:
-    ```bash
-    ollama serve
-    ```
-2.  Pull the default model (Llama 3):
-    ```bash
-    ollama pull llama3
-    ```
-
----
-
-## 4. Run the Web Application
-
-With the environment activated and Ollama running, launch the raw2ready web server:
+To start the raw2ready web interface, run the entry script:
 
 ```bash
 python run_app.py
 ```
 
-Open your browser and navigate to `http://localhost:8081`.
+Then, open your browser and navigate to:
+
+```text
+http://localhost:8081
+```
+
+### 5. Optional: Install Ollama
+
+raw2ready supports Agentic AI assisted exploration of data, experimental conditions, microbial information and literature using local Large Language Models via *Ollama*.
+
+To install Ollama, run the following command from a directory in which you want to download it:
+
+```bash
+cd ~
+mkdir ollama
+cd ollama
+curl -fsSL https://ollama.com/install.sh | sh
+ollama pull llama3
+```
+
+## Containerized Deployment (Docker)
+
+Coming soon...

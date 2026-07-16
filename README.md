@@ -34,9 +34,9 @@ The framework supports:
 
 The framework has been tested on Linux environments (Ubuntu, Mint) and Windows via WSL.
 
-## Development Deployment (Conda)
+## Manual Deployment (Conda)
 
-For development purposes, raw2ready can be deployed using Conda. This creates an isolated virtual environment and installs all dependencies specified in the `conda.yml` configuration.
+You can deploy raw2ready manually using Conda (requires installation of miniconda - see [installation](docs/installation.md)). This creates an isolated virtual environment and installs all dependencies specified in the `conda.yml` configuration.
 
 ### 1. Clone the Repository
 

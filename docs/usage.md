@@ -21,7 +21,7 @@ The **Dashboard** module acts as the home portal of the application. It displays
 
 ## 2. Load Module
 
-The **Load** module allows users to import, preview, clean, and validate raw experimental files. It parses raw sheets from Sartorius bioreactors, BioLectorXT devices, gas analyzers, and generic CSV/Excel logs. Users can inspect the raw data structure, verify datatypes, perform basic cleaning operations (e.g., removing duplicates, deleting columns, removing empty rows), and cache the cleaned data.
+The **Load** module allows users to import, preview, clean, and validate raw experimental files. It parses raw sheets from Sartorius bioreactors, BioLectorXT devices, gas analyzers, and generic CSV/Excel data files. Users can inspect the raw data structure, verify datatypes, perform basic cleaning operations (e.g., removing duplicates, deleting columns, removing empty rows), and cache the cleaned data.
 
 ### Dataset Upload & Select
 ![Load Upload Placeholder](assets/images/placeholder_load_upload.png)
@@ -71,7 +71,7 @@ The **Plot** module offers visual exploration of time-series bioprocess logs and
 
 ## 6. Metadata Module
 
-The **Metadata** module builds fermentation experiment metadata schemas following the ISA/MIM structure (MIFE standard). It enables tracking investigations, studies, observation units, samples, and assays. Users can define study designs, configure factors, add sample characteristics, register assays, and export/import standard JSON metadata protocols.
+The **Metadata** module builds fermentation experiment metadata schemas following the ISA/MIM structure ([MIFE](https://doi.org/10.1093/gigascience/giag038) standard). It enables tracking investigations, studies, observation units, samples, and assays. Users can define study designs, configure factors, add sample characteristics, register assays, and export/import standard JSON metadata protocols.
 
 ### Investigation Setup
 ![Metadata Investigation Placeholder](assets/images/placeholder_metadata_investigation.png)
@@ -102,6 +102,8 @@ The **LLM (Large Language Model) Dataset** module provides a local chatbot assis
 ### Agent Chatbot Interface
 ![LLM Chat Placeholder](assets/images/placeholder_llm_chat.png)
 *Placeholder: Natural language chat interface with agent toggle panels.*
+
+It currently supports the following agents: data analysis (loaded data), experimental conditions (loaded metadata based on [MIFE](https://doi.org/10.1093/gigascience/giag038) standard), literature search ([CrossRef](https://www.crossref.org/)), microbial information ([BacDive](https://bacdive.dsmz.de/)), and general web search ([DuckDuckGo](https://duckduckgo.com/)).
 
 ---
 
