@@ -2,6 +2,8 @@
 
 Follow these steps to set up your environment and launch the **raw2ready** application.
 
+---
+
 ## Manual Deployment (Conda)
 
 You can deploy raw2ready manually using Conda (requires installation of miniconda - see [installation](docs/installation.md)). This creates an isolated virtual environment and installs all dependencies specified in the `conda.yml` configuration.
@@ -58,6 +60,8 @@ cd ollama
 curl -fsSL https://ollama.com/install.sh | sh
 ollama pull llama3
 ```
+
+---
 
 ## Containerized Deployment (Docker)
 
