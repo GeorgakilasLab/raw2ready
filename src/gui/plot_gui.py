@@ -127,97 +127,113 @@ class plotgui:
     def content_(self):
         """Renders the HTML/CSS contents of the plot page."""
 
-        with ui.row().classes("w-full no-wrap"):
+        with ui.column().classes("w-full gap-4"):
 
             # ==========================================
-            # LEFT PANEL
+            # PLOT SETTINGS CARD (STYLE & LAYOUT MATCHING LOAD PAGE)
             # ==========================================
-            with ui.column().classes("w-[370px] p-4 gap-3 bg-slate-100"):
+            with ui.card().classes("w-full rounded-xl shadow-md p-6 gap-4"):
 
-                ui.label("Plot Data").classes("text-h5")
+                ui.label("Plot Data").classes("text-h6 font-bold")
 
-                ui.label("Select Data File").classes("text-h6")
+                # Row 1: File selector & Preview container
+                with ui.row().classes("w-full gap-4 items-start flex-wrap"):
+                    # File selector
+                    with ui.column().classes("w-80 min-w-[250px] gap-2"):
+                        ui.label("Select Data File").classes("text-sm font-semibold text-slate-700")
+                        with ui.row().classes("w-full items-center gap-2"):
+                            self.file_selector = ui.select(
+                                [],
+                                label="Loaded Files",
+                                with_input=True,
+                                on_change=lambda e: self.load_selected_file(),
+                            ).classes("flex-1")
 
-                with ui.row().classes("w-full items-center gap-2"):
+                            ui.button(
+                                "Refresh",
+                                on_click=self.refresh_loaded_files
+                            ).classes("w-24")
 
-                    self.file_selector = ui.select(
+                    # Preview box
+                    with ui.column().classes("flex-1 min-w-[300px] gap-2"):
+                        ui.label("Data Preview").classes("text-sm font-semibold text-slate-700")
+                        self.preview_box = ui.column().classes(
+                            "w-full h-[140px] overflow-y-auto overflow-x-hidden bg-slate-50 border border-slate-200 p-2 rounded"
+                        )
+
+                ui.separator()
+
+                # Row 2: Filtering Configurations
+                with ui.row().classes("w-full gap-4 items-center flex-wrap"):
+                    self.exp_col = ui.select(
                         [],
-                        label="Loaded Files",
+                        label="Experiment Column",
                         with_input=True,
-                        on_change=lambda e: self.load_selected_file(),
-                    ).classes("flex-1")
+                        on_change=lambda e: self.update_experiment_values(),
+                    ).classes("w-64 min-w-[200px]")
+
+                    self.exp_val = ui.select(
+                        [],
+                        label="Experiment Values",
+                        multiple=True,
+                        with_input=True,
+                    ).props("use-chips").classes("flex-1 min-w-[250px]")
+
+                    self.well_selector = ui.select(
+                        [],
+                        label="Wells",
+                        multiple=True,
+                        with_input=True,
+                    ).props("use-chips").classes("flex-1 min-w-[250px]")
+
+                ui.separator()
+
+                # Row 3: Plot Parameters & Selection
+                with ui.row().classes("w-full gap-4 items-center flex-wrap"):
+                    self.x_selector = ui.select(
+                        [],
+                        label="X Variable",
+                        value=None,
+                        with_input=True,
+                    ).props("clearable use-input").classes("w-64 min-w-[200px]")
+
+                    self.y_selector = ui.select(
+                        [],
+                        label="Y Variables",
+                        multiple=True,
+                        with_input=True,
+                    ).props("use-chips").classes("flex-1 min-w-[250px]")
+
+                    self.plot_type = ui.select(
+                        [
+                            "Line",
+                            "Scatter",
+                            "Bar",
+                            "Histogram",
+                            "Boxplot",
+                            "Violin",
+                        ],
+                        value="Line",
+                        label="Plot Type",
+                    ).classes("w-64 min-w-[200px]")
+
+                # Row 4: Action Buttons
+                with ui.row().classes("w-full gap-4 items-center mt-2 flex-wrap"):
+                    ui.button(
+                        "Plot",
+                        on_click=self.plot
+                    ).classes("w-40")
 
                     ui.button(
-                        "Refresh",
-                        on_click=self.refresh_loaded_files
-                    ).classes("w-24")
-
-                self.preview_box = ui.column().classes(
-                    "w-full h-[180px] overflow-auto bg-white p-2 rounded shadow"
-                )
-
-                self.exp_col = ui.select(
-                    [],
-                    label="Experiment Column",
-                    with_input=True,
-                    on_change=lambda e: self.update_experiment_values(),
-                ).classes("w-full")
-
-                self.exp_val = ui.select(
-                    [],
-                    label="Experiment Values",
-                    multiple=True,
-                    with_input=True,
-                ).props("use-chips").classes("w-full")
-
-                self.well_selector = ui.select(
-                    [],
-                    label="Wells",
-                    multiple=True,
-                    with_input=True,
-                ).props("use-chips").classes("w-full")
-
-                self.x_selector = ui.select(
-                    [],
-                    label="X Variable",
-                    value=None,
-                    with_input=True,
-                ).props("clearable use-input").classes("w-full")
-
-                self.y_selector = ui.select(
-                    [],
-                    label="Y Variables",
-                    multiple=True,
-                    with_input=True,
-                ).props("use-chips").classes("w-full")
-
-                self.plot_type = ui.select(
-                    [
-                        "Line",
-                        "Scatter",
-                        "Bar",
-                        "Histogram",
-                        "Boxplot",
-                        "Violin",
-                    ],
-                    value="Line",
-                    label="Plot Type",
-                ).classes("w-full")
-
-                ui.button(
-                    "Plot",
-                    on_click=self.plot
-                ).classes("w-full")
-
-                ui.button(
-                    "Clear",
-                    on_click=lambda: self.plot_area.clear()
-                ).classes("w-full")
+                        "Clear",
+                        on_click=lambda: self.plot_area.clear()
+                    ).classes("w-40")
 
             # ==========================================
-            # RIGHT PANEL
+            # PLOT / VISUALIZATION AREA CARD
             # ==========================================
-            with ui.column().classes("flex-1 p-4"):
+            with ui.card().classes("w-full rounded-xl shadow-md p-6 gap-4"):
+                ui.label("Visualization").classes("text-h6 font-bold")
                 self.plot_area = ui.column().classes("w-full")
 
         self.refresh_loaded_files()
@@ -285,17 +301,18 @@ class plotgui:
             self.preview_box.clear()
     
             with self.preview_box:
-    
-                ui.label(f"Rows Loaded: {len(self.df)}")
-    
-                ui.table(
-                    columns=[
-                        {"name": c, "label": c, "field": c}
-                        for c in self.df.columns
-                    ],
-                    rows=self.df.head(10).to_dict("records"),
-                    pagination=10,
-                ).classes("text-xs")
+
+                ui.label(f"Rows Loaded: {len(self.df)}").classes("text-xs font-semibold")
+
+                with ui.column().style("width: 100%; overflow-x: auto;"):
+                    ui.table(
+                        columns=[
+                            {"name": c, "label": c, "field": c}
+                            for c in self.df.columns
+                        ],
+                        rows=self.df.head(10).to_dict("records"),
+                        pagination=10,
+                    ).classes("w-full text-xs").style("min-width: max-content;")
     
             ui.notify(f"Loaded: {fname}")
     

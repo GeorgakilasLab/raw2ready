@@ -81,20 +81,13 @@ def frame(navigation_title: str):
         positive=colors_['positive']['value']
     )
 
-    with ui.header():
-        with ui.row():
-            if themes_['header_text']:
+    if themes_['header_text']:
+        with ui.header():
+            with ui.row():
                 font_header(themes_['software_name_'] + navigation_title)
 
     with ui.column().classes('w-full'):
         yield
-
-    with ui.footer().classes('bg-accent h-18 p-2'):
-        with ui.row():
-            ui.image(themes_['funding_logo']) \
-                .props('fit=scale-down') \
-                .classes(themes_['funding_logo_size']) \
-                .style('height: 50px')
 
         # with ui.row():
         #     ui.space()

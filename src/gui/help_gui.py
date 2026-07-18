@@ -174,8 +174,7 @@ class helpgui:
             # --------------------------------------------------
             with ui.card().classes(
                 "w-full rounded-3xl shadow-2xl "
-                "bg-gradient-to-r from-blue-700 "
-                "via-cyan-500 to-sky-500 text-white p-8"
+                "bg-gradient-to-r from-[#64748B] via-[#63B3ED] to-[#4FD1C5] text-white p-8"
             ):
 
                 with ui.row().classes(
@@ -191,15 +190,9 @@ class helpgui:
                         )
 
                         ui.label(
-                            "Official Documentation & AI Guide & Troubleshooting & Best Practices"
+                            "Documentation, Troubleshooting and Best Practices"
                         ).classes(
                             "text-lg opacity-90 mt-2"
-                        )
-
-                        ui.label(
-                            "Version 2026"
-                        ).classes(
-                            "text-sm opacity-80 mt-4"
                         )
 
                     ui.icon(
@@ -209,58 +202,58 @@ class helpgui:
                     )
 
             # --------------------------------------------------
-            # QUICK KPI INFO
+            # DIRECTORY PANEL
             # --------------------------------------------------
-            with ui.row().classes(
-                "w-full gap-4 flex-wrap"
+            with ui.card().classes(
+                "w-full rounded-2xl shadow-lg border border-slate-200 bg-white p-6"
             ):
-
-                self.stat_card(
-                    "Main Modules",
-                    "11+",
-                    "dashboard",
-                    "text-blue-600",
+                ui.label("Resources & Contacts").classes(
+                    "text-xl font-bold mb-4 text-slate-800"
                 )
 
-                self.stat_card(
-                    "AI Functions",
-                    "8+",
-                    "smart_toy",
-                    "text-purple-600",
-                )
+                with ui.row().classes("w-full gap-8 flex-wrap"):
+                    
+                    with ui.column().classes("flex-1 min-w-[250px]"):
+                        ui.label("Documentation & Repositories").classes(
+                            "font-bold text-slate-700 mb-2"
+                        )
+                        
+                        with ui.row().classes("items-center gap-2 mb-2"):
+                            ui.icon("code", color="primary")
+                            ui.link(
+                                "GitHub Repository",
+                                "https://github.com/GeorgakilasLab/raw2ready",
+                                new_tab=True
+                            ).classes("text-blue-600 font-semibold hover:underline")
 
-                self.stat_card(
-                    "Export / DB",
-                    "Ready",
-                    "cloud_upload",
-                    "text-green-600",
-                )
+                        with ui.row().classes("items-center gap-2 mb-2"):
+                            ui.icon("description", color="primary")
+                            ui.link(
+                                "GitHub Pages Documentation",
+                                "https://GeorgakilasLab.github.io/raw2ready/",
+                                new_tab=True
+                            ).classes("text-blue-600 font-semibold hover:underline")
 
-                self.stat_card(
-                    "Admin Tools",
-                    "Enabled",
-                    "admin_panel_settings",
-                    "text-red-500",
-                )
+                        with ui.row().classes("items-center gap-2"):
+                            ui.icon("bug_report", color="primary")
+                            ui.link(
+                                "Report an Issue / Bug Tracker",
+                                "https://github.com/GeorgakilasLab/raw2ready/issues",
+                                new_tab=True
+                            ).classes("text-blue-600 font-semibold hover:underline")
 
-            # --------------------------------------------------
-            # QUICK START
-            # --------------------------------------------------
-            self.section_card(
-                "Quick Start Workflow",
-                "rocket_launch",
-                [
-                    "1. Open LOAD and import CSV / Excel / JSON files.",
-                    "2. Validate preview table and dataset structure.",
-                    "3. Use PARSE to clean missing values, duplicates and bad column names.",
-                    "4. Use MERGE to combine multiple sources.",
-                    "5. Use CALCULATE for KPIs, formulas and engineered features.",
-                    "6. Use PLOT for charts, trends and distributions.",
-                    "7. Use Dashboard AI tools for insights, forecasting and reports.",
-                    "8. Export final dataset or save to database.",
-                ],
-                "text-green-600",
-            )
+                    with ui.column().classes("flex-1 min-w-[250px] border-l border-slate-100 pl-4"):
+                        ui.label("Contact Persons").classes(
+                            "font-bold text-slate-700 mb-2"
+                        )
+                        
+                        with ui.column().classes("mb-3"):
+                            ui.label("George Georgakilas").classes("font-semibold text-slate-800")
+                            ui.label("ggeorgakilas@athenarc.gr").classes("text-sm text-slate-500")
+
+                        with ui.column():
+                            ui.label("Michael Antoniades").classes("font-semibold text-slate-800")
+                            ui.label("antoniades000michael@gmail.com").classes("text-sm text-slate-500")
 
             # --------------------------------------------------
             # MODULES
@@ -269,101 +262,20 @@ class helpgui:
                 "Sidebar Modules Explained",
                 "apps",
                 [
-                    "DASHBOARD  -> Main analytics center with KPIs and AI tools.",
-                    "LOAD       -> Import source files into memory/database, clean columns, normalize values, remove duplicates.",
-                    "MERGE      -> Join multiple datasets together.",
-                    "CALCULATE  -> Create formulas, metrics and transformations.",
-                    "PLOT       -> Build charts automatically.",
-                    "INVESTIGATION   -> Standardized workflow templates.",
-                    "LLM        -> AI assistant for data tasks.",
-                    "LLM PROTOCOL -> AI automation workflows.",
-                    "SQL CONSOLE (Admin) -> SQL + Natural Language to SQL.",
-                    "HELP       -> This support center.",
+                    "DASHBOARD  -> Overview of loaded data files.",
+                    "LOAD       -> Import data files, fill missing values, clean columns, remove duplicates, standardize columns.",
+                    "MERGE      -> Merge loaded datasets together.",
+                    "CALCULATE  -> Evaluate custom formulas and create new data columns.",
+                    "PLOT       -> Visualize data with interactive plots.",
+                    "METADATA   -> Semantically annotate datasets with MIFE.",
+                    "LLM        -> Agentic AI assistant for data, experimental conditions, microbial information and literature.",
+                    "HELP       -> This help center.",
                 ],
                 "text-blue-600",
             )
 
             # --------------------------------------------------
-            # DASHBOARD GUIDE
-            # --------------------------------------------------
-            self.section_card(
-                "Dashboard Guide",
-                "dashboard_customize",
-                [
-                    "Loaded Files -> Number of imported source files.",
-                    "Rows -> Active dataset row count.",
-                    "Columns -> Active dataset column count.",
-                    "Last Loaded File -> Most recent imported file.",
-                    "Preview Table -> Top rows for quick inspection.",
-                    "Refresh -> Recalculate dashboard metrics.",
-                    "Charts -> Auto visualization engine.",
-                    "Forecast -> Predict future values for numeric trends.",
-                    "Report -> Executive AI report.",
-                    "Recommendations -> Smart next-step suggestions.",
-                ],
-                "text-cyan-600",
-            )
-
-            # --------------------------------------------------
-            # AI ANALYTICS
-            # --------------------------------------------------
-            self.section_card(
-                "AI Analytics Tools",
-                "psychology",
-                [
-                    "Summary -> Column types, missing values, data profile.",
-                    "Anomalies -> Detect suspicious outliers or invalid values.",
-                    "Clean -> Auto cleaning and standardization.",
-                    "Forecast -> Predict next N values.",
-                    "Report -> Executive management summary.",
-                    "Recommendations -> Operational improvements.",
-                    "Auto Charts -> Suggested visualizations.",
-                    "Copilot Chat -> Natural language assistant.",
-                ],
-                "text-purple-600",
-            )
-
-            # --------------------------------------------------
-            # AI CHAT
-            # --------------------------------------------------
-            self.section_card(
-                "AI Copilot Example Prompts",
-                "chat",
-                [
-                    "summarize this dataset",
-                    "find anomalies in temperature column",
-                    "forecast next 10 values",
-                    "which columns are numeric?",
-                    "clean missing values",
-                    "generate executive report",
-                    "what chart should I use?",
-                    "which feature is best for prediction?",
-                ],
-                "text-indigo-600",
-            )
-
-            # --------------------------------------------------
-            # SQL CONSOLE
-            # --------------------------------------------------
-            self.section_card(
-                "SQL Console (Admin)",
-                "terminal",
-                [
-                    "RAW SQL MODE -> Run manual PostgreSQL queries.",
-                    "AI MODE -> Write natural language and convert to SQL.",
-                    "Examples:",
-                    "show tables",
-                    "show latest logs",
-                    "how many users",
-                    "latest datasets",
-                    "all admins",
-                    "Security filters block dangerous commands.",
-                ],
-                "text-red-500",
-            )
-
-            # --------------------------------------------------
-            # FILE SUPPORT
+            # FILE FORMAT SUPPORT
             # --------------------------------------------------
             self.section_card(
                 "Supported Files",
@@ -380,20 +292,34 @@ class helpgui:
             )
 
             # --------------------------------------------------
+            # AI CHAT
+            # --------------------------------------------------
+            self.section_card(
+                "AI Assistant Example Prompts",
+                "chat",
+                [
+                    "What is the maximum value of pH in the active dataset?",
+                    "What was the average dissolved oxygen (DO) concentration during the first 5 hours of the fermentation?",
+                    "Show me the experimental factors and study designs from the loaded MIFE metadata.",
+                    "Look up the oxygen requirements and optimum pH of Saccharomyces cerevisiae in BacDive.",
+                    "Search CrossRef for papers on carbon source optimization in Pseudomonas putida bioprocesses.",
+                    "Find online resources discussing the effect of temperature shifts on recombinant protein expression.",
+                ],
+                "text-indigo-600",
+            )
+
+            # --------------------------------------------------
             # TROUBLESHOOTING
             # --------------------------------------------------
             self.section_card(
                 "Troubleshooting",
                 "build",
                 [
-                    "No dataset loaded -> Import a file first.",
                     "Preview empty -> Check separator / file format.",
                     "Wrong columns -> Re-import using correct delimiter.",
-                    "Charts blank -> Need numeric/date columns.",
-                    "Forecast failed -> Select stable numeric series.",
+                    "Charts blank -> Need numeric columns.",
                     "Slow system -> Reduce huge files or split datasets.",
-                    "SQL error -> Check table names / permissions.",
-                    "AI SQL no result -> Use simpler natural language.",
+                    "AI-assistant gives wrong results -> Try again with simpler phrasing or different wording.",
                 ],
                 "text-orange-600",
             )
@@ -408,29 +334,10 @@ class helpgui:
                     "Use clear column names.",
                     "Always clean duplicates first.",
                     "Check null values early.",
-                    "Validate units before forecasting.",
-                    "Use reports for management decisions.",
-                    "Use alerts for production monitoring.",
-                    "Backup database regularly.",
-                    "Use AI recommendations after cleaning.",
+                    "Validate units before applying custom formulas.",
+                    "Remember that AI-assistant may make mistakes.",
                 ],
                 "text-green-700",
-            )
-
-            # --------------------------------------------------
-            # SECURITY
-            # --------------------------------------------------
-            self.section_card(
-                "Security & Roles",
-                "verified_user",
-                [
-                    "Viewer -> Read-only usage.",
-                    "User _> Standard analytics access.",
-                    "Admin -> SQL console + advanced controls.",
-                    "Superadmin -> Full enterprise control.",
-                    "Dangerous SQL commands are blocked in AI mode.",
-                ],
-                "text-sky-700",
             )
 
             # --------------------------------------------------
@@ -444,36 +351,6 @@ class helpgui:
                     "Use only required columns.",
                     "Archive old datasets.",
                     "Use filters before plotting huge data.",
-                    "Run heavy analytics after cleaning.",
                 ],
                 "text-pink-600",
             )
-
-            # --------------------------------------------------
-            # CONTACT / SUPPORT
-            # --------------------------------------------------
-            self.section_card(
-                "Need Help Fast?",
-                "support",
-                [
-                    "Use Dashboard AI Copilot chat.",
-                    "Describe issue naturally.",
-                    "Example: Why is my chart blank?",
-                    "Example: Clean duplicate rows.",
-                    "Example: Show latest failed uploads.",
-                ],
-                "text-indigo-700",
-            )
-
-            # --------------------------------------------------
-            # FOOTER
-            # --------------------------------------------------
-            with ui.card().classes(
-                "w-full rounded-2xl bg-white shadow-lg p-5"
-            ):
-
-                ui.label(
-                    "raw2ready Help Center 2026"
-                ).classes(
-                    "text-sm text-slate-500"
-                )

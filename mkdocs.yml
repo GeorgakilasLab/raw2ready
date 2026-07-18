@@ -5,6 +5,8 @@ site_url: https://GeorgakilasLab.github.io/raw2ready/
 
 theme:
   name: material
+  logo: assets/images/raw2ready.svg
+  favicon: assets/images/raw2ready_favicon.svg
   palette:
     - media: "(prefers-color-scheme: light)"
       scheme: default
@@ -31,6 +33,9 @@ markdown_extensions:
   - pymdownx.inlinehilite
   - pymdownx.snippets
   - pymdownx.superfences
+
+extra_css:
+  - assets/custom.css
 
 nav:
   - Home: index.md

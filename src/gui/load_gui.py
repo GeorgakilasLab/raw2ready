@@ -248,11 +248,14 @@ class loadgui:
     # ==================================================
     # LOAD SECTION
     # ==================================================
+    # ==================================================
+    # LOAD SECTION
+    # ==================================================
     def section_load(self):
 
         with ui.card().classes("w-full rounded-xl shadow-md"):
     
-            ui.label("Upload Dataset").classes("text-h6 font-bold")
+            ui.label("Upload Data File").classes("text-h6 font-bold")
     
             # =========================
             # SETTINGS ROW
@@ -263,18 +266,18 @@ class loadgui:
                 self.file_type_select = ui.select(
                     ["XLS(X)", "Text"],
                     value="XLS(X)",
-                    label="File Type",
+                    label="File Format",
                 ).classes("w-44")
     
                 # RAW FORMAT
                 self.raw_format_select = ui.select(
-                    ["Other", "Gas Analyzer", "BioLectorXT"],
+                    ["Other", "BioLectorXT"],
                     value="Other",
-                    label="Raw Bioreactor Files",
+                    label="Type",
                 ).classes("w-64")
     
             # =========================
-            # DELIMITER + JSON (SAME ROW)
+            # DELIMITER ROW (ONLY DELIMITER)
             # =========================
             with ui.row().classes("gap-4 flex-wrap") as self.delimiter_row:
     
@@ -284,53 +287,35 @@ class loadgui:
                     value="Comma",
                     label="Delimiter",
                 ).classes("w-44")
-    
-                # JSON DROPDOWN (NEXT TO DELIMITER)
-                with ui.column().classes("gap-2"):
 
-                    ui.label(
-                        "Gas Analyzer Config (JSON)"
-                    ).classes("text-sm")
+            # ======================================
+            # GAS ANALYZER CONFIG CONTAINER ("BOX")
+            # ======================================
+            with ui.card().classes(
+                "w-full max-w-md p-4 bg-slate-50 border border-slate-200 mt-2 gap-2"
+            ) as self.gas_analyzer_box:
                 
-                    # ======================================
-                    # JSON FILE SELECTOR
-                    # ======================================
-                    with ui.row().classes("items-center gap-2"):
+                ui.label("Gas Analyzer Config (JSON)").classes(
+                    "text-sm font-bold text-slate-700"
+                )
                 
-                        self.json_selector = ui.select(
-                            [],
-                            label="Saved JSON Files",
-                            with_input=True,
-                            on_change=lambda e: self.load_selected_json()
-                        ).classes("w-64")
+                # UPLOAD CONFIG
+                self.json_upload_component = ui.upload(
+                    on_upload=self.handle_json_upload,
+                    auto_upload=True,
+                    multiple=False,
+                    label="Upload Sartorius Config (.json)"
+                ).props(
+                    "accept=.json flat bordered"
+                ).classes("w-full")
+
+                # SELECTABLE CONFIGS LIST
+                ui.label("Select Active Config:").classes("text-xs text-slate-500 mt-2")
+                self.json_files_container = ui.column().classes("w-full gap-1 mt-1")
                 
-                        ui.button(
-                            "+ NEW",
-                            icon="add",
-                            color="primary",
-                            on_click=self.create_new_json
-                        )
-                
-                        ui.button(
-                            "REFRESH",
-                            icon="refresh",
-                            on_click=self.refresh_json_files
-                        )
-                
-                    # ======================================
-                    # JSON UPLOAD
-                    # ======================================
-                    ui.upload(
-                        on_upload=self.handle_json_upload,
-                        auto_upload=True,
-                        multiple=False,
-                    ).props(
-                        "accept=.json"
-                    ).classes("w-64")
-                
-                    self.json_status = ui.label(
-                        "No config loaded"
-                    ).classes("text-xs text-gray-500")
+                self.json_status = ui.label(
+                    "No config loaded"
+                ).classes("text-xs text-gray-500 mt-1")
     
             # =========================
             # EVENT HANDLERS (AFTER CREATION)
@@ -340,34 +325,37 @@ class loadgui:
             )
     
             self.raw_format_select.on_value_change(
-                lambda e: self._on_type_change()
+                lambda e: self.toggle_gas_analyzer_box()
             )
     
             # =========================
             # INITIAL STATE
             # =========================
-            self.toggle_delimiter()
+            self._on_type_change()
+            self.show_json_files()
     
-            # =========================
-            # UPLOAD AREA
-            # =========================
-            self.upload_component = ui.upload(
-                on_upload=self.handle_upload,
-                auto_upload=True,
-                multiple=False,
-                label=""
-            ).props(
-                "accept=.csv,.tsv,.xls,.xlsx,.txt"
-            ).classes("w-full mt-4")
-    
-            ui.label(
-                "Click or drag files here\nAllowed Files: CSV / TSV / XLS / XLSX / TXT"
-            )
-    
-            # =========================
-            # FILE LIST
-            # =========================
-            self.files_container = ui.column().classes("w-full mt-3")
+            # ======================================
+            # FILE UPLOAD BOX (CONTAINER)
+            # ======================================
+            with ui.card().classes(
+                "w-full p-4 bg-slate-50 border border-slate-200 mt-4 gap-2"
+            ) as self.upload_box:
+                
+                ui.label("Upload Files").classes(
+                    "text-sm font-bold text-slate-700"
+                )
+
+                self.upload_component = ui.upload(
+                    on_upload=self.handle_upload,
+                    auto_upload=True,
+                    multiple=False,
+                    label=""
+                ).props(
+                    "accept=.csv,.tsv,.xls,.xlsx,.txt flat bordered"
+                ).classes("w-full")
+
+                self.files_container = ui.column().classes("w-full gap-2 mt-2")
+            
             self.show_uploaded_files()
     
             # =========================
@@ -381,12 +369,6 @@ class loadgui:
                     icon="delete",
                     color="negative",
                     on_click=self.clear_memory
-                )
-                
-                ui.button(
-                    "REFRESH",
-                    icon="refresh",
-                    on_click=self.force_refresh
                 )
     # ==================================================
     # FILE LIST UI
@@ -402,22 +384,82 @@ class loadgui:
         active = self.storage.get("last_loaded_file")
     
         with self.files_container:
-    
             if not files:
-                ui.label("No parsed files loaded.")
+                ui.label("No data files loaded.").classes("text-sm text-slate-400 italic")
                 return
-    
-            for fname in files:
-    
-                is_active = fname == active
-    
-                ui.button(
-                    f"{'? ' if is_active else ''}{fname}",
-                    on_click=lambda e, f=fname: self.select_file(f),
-                ).props("flat").classes(
-                    "w-full text-left "
-                    + ("bg-blue-100" if is_active else "")
-                )
+            
+            ui.label("Select Active Data File:").classes("text-xs text-slate-500 font-semibold mt-2")
+            
+            with ui.column().classes("w-full gap-2 mt-1"):
+                for fname in files:
+                    is_active = fname == active
+                    
+                    with ui.row().classes(
+                        "w-full items-center justify-between p-3 rounded-xl cursor-pointer border transition-all " +
+                        ("bg-blue-50 border-blue-300 text-blue-900 shadow-sm" if is_active else "bg-white border-slate-200 hover:bg-slate-50 text-slate-700")
+                    ).on("click", lambda e, f=fname: self.select_file(f)):
+                        with ui.row().classes("items-center gap-3"):
+                            ui.icon("insert_drive_file").classes("text-lg " + ("text-blue-600" if is_active else "text-slate-400"))
+                            ui.label(fname).classes("text-sm font-semibold")
+                        with ui.row().classes("items-center gap-2"):
+                            if is_active:
+                                ui.icon("check_circle").classes("text-blue-600 text-lg")
+                            ui.button(
+                                icon="delete",
+                                color="negative",
+                            ).props("flat round dense size=sm").classes(
+                                "text-slate-400 hover:text-red-500"
+                            ).on("click.stop", lambda e, f=fname: self.remove_file(f))
+                            
+    def run_timer(self, delay, callback, once=True):
+        if hasattr(self, "upload_box") and self.upload_box:
+            with self.upload_box:
+                return ui.timer(delay, callback, once=once)
+        else:
+            return ui.timer(delay, callback, once=once)
+
+    def remove_file(self, filename):
+        try:
+            # Remove from caches and buffers
+            if "parsed_cache" in self.storage and filename in self.storage["parsed_cache"]:
+                del self.storage["parsed_cache"][filename]
+            if "original_cache" in self.storage and filename in self.storage["original_cache"]:
+                del self.storage["original_cache"][filename]
+            if "files" in self.storage and filename in self.storage["files"]:
+                del self.storage["files"][filename]
+            if filename in self.file_buffers:
+                del self.file_buffers[filename]
+
+            # Defer notification to next tick
+            self.run_timer(0, lambda: ui.notify(f"{filename} removed from memory", type="info"), once=True)
+
+            # Check if this was the active file
+            active = self.storage.get("last_loaded_file")
+            if active == filename:
+                remaining = self.get_available_files()
+                if remaining:
+                    self.select_file(remaining[0])
+                else:
+                    self.current_df = None
+                    self.original_df = None
+                    self.filename = ""
+                    self.storage["last_loaded_file"] = ""
+                    self.save_global_df()
+                    def do_clear_refresh():
+                        self.show_uploaded_files()
+                        self.refresh_status()
+                        if self.parent and hasattr(self.parent, "refresh_all_pages"):
+                            self.parent.refresh_all_pages()
+                    self.run_timer(0, do_clear_refresh, once=True)
+            else:
+                def do_simple_refresh():
+                    self.show_uploaded_files()
+                    if self.parent and hasattr(self.parent, "refresh_all_pages"):
+                        self.parent.refresh_all_pages()
+                self.run_timer(0, do_simple_refresh, once=True)
+
+        except Exception as e:
+            ui.notify(f"Failed to remove file: {str(e)}", type="negative")
                     
     def select_file(self, filename):
 
@@ -434,14 +476,18 @@ class loadgui:
     
             df = self.make_json_safe(df)
     
+            self.filename = filename
             self.current_df = df.copy()
             self.original_df = df.copy()
     
             self.save_global_df()
-            self.save_current_to_cache()
-            self.refresh_status()
-    
-            ui.notify(f"{filename} loaded instantly (cached)", type="info")
+            
+            # Defer cache save and UI refresh to next tick to avoid RuntimeError
+            def do_refresh():
+                self.save_current_to_cache()
+                self.refresh_status()
+                ui.notify(f"{filename} loaded instantly (cached)", type="info")
+            self.run_timer(0, do_refresh, once=True)
     
         else:
             # fallback (first time only)
@@ -452,7 +498,7 @@ class loadgui:
             self.run_parse()
     
         # refresh UI highlight
-        self.show_uploaded_files()
+        self.run_timer(0, self.show_uploaded_files, once=True)
         
     # ==================================================
     # VALIDATOR
@@ -461,9 +507,7 @@ class loadgui:
 
         with ui.card().classes("w-full rounded-xl shadow-md"):
     
-            ui.label("Dataset Accepted Messages").classes(
-                "text-h6 font-bold"
-            )
+            ui.label("Data File Import Log").classes("text-h6 font-bold")
     
             self.validation_label = ui.label(
                 "No dataset loaded."
@@ -482,9 +526,7 @@ class loadgui:
     
                 ui.label(
                     "Active Dataset"
-                ).classes(
-                    "text-h6 font-bold"
-                )
+                ).classes("text-h6 font-bold")
     
                 ui.button(
     
@@ -502,7 +544,7 @@ class loadgui:
             # PREVIEW AREA
             # ============================================
             self.preview_container = ui.column().classes(
-                "w-full"
+                "w-full overflow-hidden"
             )
     
             self.refresh_preview()
@@ -514,7 +556,7 @@ class loadgui:
 
         with ui.card().classes("w-full rounded-xl shadow-md"):
         
-            ui.label("Data Cleaning & Column Settings").classes("text-h6 font-bold")
+            ui.label("Data Cleanup").classes("text-h6 font-bold")
 
             self.cleaning_container = ui.column().classes("w-full")
             self.column_container = ui.column().classes("w-full")
@@ -537,7 +579,25 @@ class loadgui:
             self.delimiter_row.set_visibility(False)
 
     def _on_type_change(self):
+        if self.file_type_select.value == "XLS(X)":
+            self.raw_format_select.options = ["Other", "BioLectorXT"]
+            if self.raw_format_select.value not in ["Other", "BioLectorXT"]:
+                self.raw_format_select.value = "Other"
+        else:  # Text
+            self.raw_format_select.options = ["Other", "Gas Analyzer"]
+            if self.raw_format_select.value not in ["Other", "Gas Analyzer"]:
+                self.raw_format_select.value = "Other"
+        self.raw_format_select.update()
         self.toggle_delimiter()
+        self.toggle_gas_analyzer_box()
+
+    def toggle_gas_analyzer_box(self):
+        show_box = (
+            self.file_type_select.value == "Text" and
+            self.raw_format_select.value == "Gas Analyzer"
+        )
+        self.gas_analyzer_box.set_visibility(show_box)
+
 
     def get_parse_equipment(self):
 
@@ -624,17 +684,13 @@ class loadgui:
             )
     
             # ======================================
-            # REFRESH SELECTOR
+            # REFRESH SELECTABLE LIST & CONFIGS
             # ======================================
             self.refresh_json_files()
     
-            # ======================================
-            # AUTO SELECT CURRENT JSON
-            # ======================================
-            if hasattr(self, "json_selector"):
-    
-                self.json_selector.value = e.file.name
-                self.json_selector.update()
+            # Reset uploader UI list so it doesn't remain grayed out
+            if hasattr(self, "json_upload_component") and self.json_upload_component:
+                self.json_upload_component.reset()
     
             # ======================================
             # NOTIFY
@@ -651,137 +707,83 @@ class loadgui:
                 type="negative"
             )
     
+            if hasattr(self, "json_upload_component") and self.json_upload_component:
+                self.json_upload_component.reset()
+    
             self.selected_json_config = None  
     
             
     def refresh_json_files(self):
-
-        if not hasattr(self, "json_selector"):
-            return
-    
         files = self.get_available_json_files()
-    
-        self.json_selector.options = files
-        self.json_selector.update()
-    
+        
         if not files:
-            self.json_selector.value = None
-            return
-    
-        last = self.storage.get("last_json_file")
-    
-        if last in files:
-            selected = last
+            self.selected_json_config = None
+            self.storage["last_json_file"] = ""
+            self.storage["current_json_data"] = {}
+            self.json_status.text = "No config loaded"
         else:
-            selected = files[0]
-    
-        self.json_selector.value = selected
-        self.json_selector.update()
-    
-    def load_selected_json(self):
+            last = self.storage.get("last_json_file")
+            if last not in files:
+                last = files[-1]  # Default to latest uploaded file
+            
+            self.storage["last_json_file"] = last
+            self.selected_json_config = self.storage.get("json_cache", {}).get(last)
+            self.storage["current_json_data"] = self.selected_json_config
+            self.json_status.text = f"Loaded: {last}"
+            
+        self.show_json_files()
 
+    def select_json_file(self, filename):
         try:
-    
-            filename = self.json_selector.value
-    
-            if not filename:
-                return
-    
-            cached = self.storage.get(
-                "json_cache",
-                {}
-            ).get(filename)
-    
+            cached = self.storage.get("json_cache", {}).get(filename)
             if not cached:
-    
-                ui.notify(
-                    "JSON not found",
-                    type="warning"
-                )
+                ui.notify("JSON config not found in cache", type="warning")
                 return
-    
+                
             self.selected_json_config = cached
-    
             self.storage["current_json_data"] = cached
             self.storage["last_json_file"] = filename
-    
-            self.json_status.text = (
-                f"Loaded: {filename}"
-            )
-    
-            # IMPORTANT
-            # refresh your form UI here
-            self.refresh_json_form()
-    
-            ui.notify(
-                f"{filename} loaded",
-                type="info"
-            )
-    
+            self.json_status.text = f"Loaded: {filename}"
+            # Defer UI updates to next tick to avoid RuntimeError
+            def do_json_refresh():
+                self.refresh_json_form()
+                self.show_json_files()
+                ui.notify(f"{filename} selected", type="info")
+            self.run_timer(0, do_json_refresh, once=True)
         except Exception as e:
-    
-            ui.notify(
-                f"JSON load failed: {str(e)}",
-                type="negative"
-            )
-    
-    def create_new_json(self):
+            ui.notify(f"Failed to select JSON: {str(e)}", type="negative")
 
-        # =====================================
-        # DISASSOCIATE OLD JSON
-        # =====================================
-        self.selected_json_config = {}
-    
-        self.storage["current_json_data"] = {}
-        self.storage["last_json_file"] = ""
-    
-        # =====================================
-        # CLEAR SELECTOR
-        # =====================================
-        if hasattr(self, "json_selector"):
-    
-            self.json_selector.value = None
-            self.json_selector.update()
-    
-        # =====================================
-        # RESET FORM
-        # =====================================
-        self.reset_json_form()
-    
-        self.json_status.text = (
-            "Creating new JSON config..."
-        )
-    
-        ui.notify(
-            "New JSON form created",
-            type="info"
-        )
-    def reset_json_form(self):
-
-        """
-        Clears all JSON form fields
-        """
-    
-        # Example:
-        # self.start_date.value = ""
-        # self.target_channel.value = ""
-        # etc...
-    
-        pass   
+    def show_json_files(self):
+        if not hasattr(self, "json_files_container") or self.json_files_container is None:
+            return
+            
+        self.json_files_container.clear()
+        
+        files = self.get_available_json_files()
+        active = self.storage.get("last_json_file")
+        
+        with self.json_files_container:
+            if not files:
+                ui.label("No configuration files loaded.").classes("text-xs text-slate-400 italic")
+                return
+                
+            for fname in files:
+                is_active = fname == active
+                
+                with ui.row().classes(
+                    "w-full items-center justify-between p-2 rounded-lg cursor-pointer border " +
+                    ("bg-blue-50 border-blue-200 text-blue-800" if is_active else "bg-white border-slate-100 hover:bg-slate-50 text-slate-700")
+                ).on("click", lambda e, f=fname: self.select_json_file(f)):
+                    with ui.row().classes("items-center gap-2"):
+                        ui.icon("description").classes("text-sm")
+                        ui.label(fname).classes("text-xs font-semibold")
+                    if is_active:
+                        ui.icon("check_circle").classes("text-blue-500 text-sm")
     
     def refresh_json_form(self):
-
-        """
-        Reloads UI fields from selected_json_config
-        """
-    
-        data = self.selected_json_config
-    
-        # Example:
-        # self.start_date.value = data.get("start_date", "")
-        # self.target_channel.value = data.get("target", "")
-    
-        pass 
+        """Reloads UI fields from selected_json_config"""
+        pass
+ 
         
     def mark_dirty(self):
         if hasattr(self, "reset_btn") and self.reset_btn:
@@ -801,7 +803,6 @@ class loadgui:
             
             upload_path = os.path.join(upload_dir, self.filename)
             
-            
             with open(upload_path, "wb") as f:
                 f.write(self.file_content)
             self.show_uploaded_files()
@@ -817,8 +818,9 @@ class loadgui:
     
             ui.notify(f"{self.filename} loaded & selected", type="info")
     
+            # Reset uploader UI list so it doesn't remain grayed out
             if self.upload_component:
-                self.upload_component.disable()
+                self.upload_component.reset()
     
             ui.notify("Starting automatic parsing...", type="info")
     
@@ -827,12 +829,11 @@ class loadgui:
             self.show_uploaded_files()   # UPDATE LIST
             self.refresh_status()
     
-            if self.upload_component:
-                self.upload_component.enable()
-    
         except Exception as ex:
             logger.error(traceback.format_exc())
             ui.notify(f"Upload failed: {str(ex)}", type="negative")
+            if self.upload_component:
+                self.upload_component.reset()
             
     def make_json_safe(self, df):
         df = df.copy()
@@ -986,6 +987,11 @@ class loadgui:
     def save_global_df(self):
     
         if self.current_df is None:
+            self.storage["parsed_df_json"] = None
+            self.storage["parsed_df_columns"] = None
+            self.storage["parsed_filename"] = None
+            self.storage["df_json"] = None
+            self.storage["df_columns"] = None
             return
     
         df = self.current_df
@@ -1037,6 +1043,9 @@ class loadgui:
 
         self.cleaning_container.clear()
 
+        if self.current_df is None:
+            return
+
         with self.cleaning_container:
 
             ui.separator()
@@ -1065,7 +1074,7 @@ class loadgui:
                 )
             
                 ui.button(
-                    "FILL VALUES",
+                    "FILL MISSING VALUES",
                     icon="auto_fix_high",
                     on_click=self.open_fill_dialog,
                 )
@@ -1076,7 +1085,7 @@ class loadgui:
             with ui.row().classes("w-full items-center gap-2"):
             
                 ui.button(
-                    "RESET ORIGINAL",
+                    "RESET",
                     icon="restart_alt",
                     on_click=self.reset_original,
                 ).classes("transition-all")
@@ -1086,19 +1095,12 @@ class loadgui:
                     on_click=self.check_column_types
                 )
             
-                ui.button(
-                    "AUTO FIX DATASET",
-                    icon="build",
-                    color="orange",
-                    on_click=self.auto_fix_dataset,
-                ).classes("text-white")
-            
                 ui.space()
                 
                 self.output_format = ui.select(
                     ["CSV", "TSV", "XLSX", "JSON"],
                     value="CSV",
-                    label="Convert To",
+                    label="Export As",
                 ).classes("w-44")
             
                 ui.button(
@@ -1234,17 +1236,28 @@ class loadgui:
                         # -------------------------
                         # RENAME INPUT
                         # -------------------------
-                        ui.input(
+                        name_input = ui.input(
                             value=str(col),
-    
-                            on_change=lambda e, c=col:
-                            self.rename_column(
-                                c,
-                                e.value,
-                            ),
-    
                         ).classes(
                             "flex-grow"
+                        )
+                        
+                        name_input.on(
+                            "keydown.enter",
+                            lambda _, c=col, inp=name_input: self.rename_column(c, inp.value)
+                        )
+    
+                        # -------------------------
+                        # APPLY RENAME BUTTON
+                        # -------------------------
+                        ui.button(
+                            icon="done",
+                            color="primary",
+                            on_click=lambda _, c=col, inp=name_input: self.rename_column(c, inp.value),
+                        ).props(
+                            "flat round dense"
+                        ).tooltip(
+                            f"Apply rename for: {col}"
                         )
     
                         # -------------------------
@@ -1276,12 +1289,14 @@ class loadgui:
         new = str(new).strip()
     
         if not new:
+            ui.notify("Column name cannot be empty", type="warning")
             return
     
         if old == new:
             return
     
         if new in self.current_df.columns:
+            ui.notify(f"Column '{new}' already exists", type="warning")
             return
     
         self.current_df = self.current_df.rename(
@@ -2070,6 +2085,7 @@ class loadgui:
     def validate_dataset(self):
 
         if self.current_df is None:
+            self.validation_label.text = "No data file loaded."
             return
     
         self.validation_label.text = (
@@ -2078,30 +2094,7 @@ class loadgui:
             f"Dataset accepted."
         )
 
-    # ==================================================
-    # AUTO FIX
-    # ==================================================
-    def auto_fix_dataset(self):
 
-        if self.current_df is None:
-            return
-    
-        self.current_df = self.current_df.dropna(how="all")
-        self.current_df = self.current_df.drop_duplicates()
-    
-        for c in self.current_df.columns:
-            if self.current_df[c].dtype == object:
-                self.current_df[c] = self.current_df[c].astype(str).str.strip()
-    
-        self.current_df = self.current_df.replace("nan", np.nan)
-        self.current_df = self.current_df.fillna("")
-    
-        self.df = self.current_df
-    
-        self.save_global_df()
-        self.save_current_to_cache()
-        self.mark_dirty()
-        self.refresh_status()
 
     # ==================================================
     # EXPORT
@@ -2134,7 +2127,9 @@ class loadgui:
                 indent=2,
             )
     
-        ui.download(path)
+        base_name = os.path.splitext(self.filename)[0] if self.filename else "dataset"
+        export_filename = f"{base_name}_ready.{fmt.lower()}"
+        ui.download(path, filename=export_filename)
 
     # ==================================================
     # PREVIEW
@@ -2158,41 +2153,25 @@ class loadgui:
             # ---- STATS ----
             ui.label(f"Rows: {len(df)} | Columns: {len(df.columns)}")
     
-            # ---- LIMIT PREVIEW ----
-            MAX_COLS = 10
-            preview_cols = df.columns[:MAX_COLS]
-    
             # ---- TABLE ----
-            ui.table(
-                columns=[
-                    {"name": c, "label": c, "field": c}
-                    for c in preview_cols
-                ],
-                rows=df[preview_cols].to_dict("records"),
-                pagination=10,
-            )
+            with ui.column().style("width: 100%; overflow-x: auto;"):
+                ui.table(
+                    columns=[
+                        {"name": c, "label": c, "field": c}
+                        for c in df.columns
+                    ],
+                    rows=df.to_dict("records"),
+                    pagination=10,
+                ).classes("w-full").style("min-width: max-content;")
             
-    def force_refresh(self):
 
-        try:
-            # reload shared storage
-            if "shared_data" in app.storage.general:
-                self.storage = app.storage.general["shared_data"]
-    
-            # full UI refresh
-            self.show_uploaded_files()
-            self.refresh_preview()
-    
-            ui.notify("Refreshed", type="info")
-    
-        except Exception as e:
-            ui.notify(f"Refresh failed: {str(e)}", type="negative")
     # ==================================================
     # STATUS
     # ==================================================
 
     def refresh_status(self):
 
+        self.validate_dataset()
         self.refresh_preview()
         self.show_data_cleaning()
         self.show_column_config()

@@ -10,7 +10,6 @@ import traceback
 
 import src.utils.theme as theme
 from src.utils.logging_config import get_logger
-from src.utils.paths import ensure_dirs
 
 logger = get_logger("merge_gui")
 
@@ -109,75 +108,69 @@ class mergegui:
     # =====================================================
     def content_(self):
 
-        with ui.row().classes("w-full no-wrap"):
+        with ui.column().classes("w-full gap-4"):
 
-            # =========================
-            # LEFT PANEL
-            # =========================
-            with ui.column().classes("w-[430px] p-4 gap-4 bg-slate-100"):
+            # ============================================
+            # SETTINGS CARD (STYLE & LAYOUT MATCHING UPLOAD CARD IN LOAD PAGE)
+            # ============================================
+            with ui.card().classes("w-full rounded-xl shadow-md p-6 gap-4"):
 
-                ui.label("Merge Datasets").classes("text-h5")
+                ui.label("Merge Datasets").classes("text-h6 font-bold")
 
-                ui.label("Select Files")
+                # Row 1: Datasets Selection
+                with ui.row().classes("w-full gap-4 items-center flex-wrap"):
+                    self.file_select = ui.select(
+                        [],
+                        label="Datasets to Merge",
+                        multiple=True
+                    ).classes("flex-1 min-w-[250px]")
 
-                self.file_select = ui.select(
-                    [],
-                    label="Datasets",
-                    multiple=True
-                ).classes("w-full")
+                    self.file_select.on_value_change(lambda e: self.update_columns())
 
-                self.file_select.on_value_change(lambda e: self.update_columns())
-                self.reference_file = ui.select(
-                    [],
-                    label="Reference File"
-                ).classes("w-full")
-
-                ui.button(
-                    "REFRESH FILES",
-                    on_click=self.refresh_loaded_files
-                ).classes("w-full")
+                    self.reference_file = ui.select(
+                        [],
+                        label="Reference Dataset"
+                    ).classes("w-72 min-w-[200px]")
 
                 ui.separator()
 
-                ui.label("Merge Settings")
+                # Row 2: Merge settings & parameter config
+                with ui.row().classes("w-full gap-4 items-center flex-wrap"):
+                    self.merge_type = ui.select(
+                        ["Column-wise", "Row-wise"],
+                        value="Column-wise",
+                        label="Merge Type"
+                    ).classes("w-48 min-w-[150px]")
 
-                self.merge_type = ui.select(
-                    ["Column-wise", "Row-wise"],
-                    value="Column-wise",
-                    label="Merge Type"
-                ).classes("w-full")
+                    self.merge_on = ui.select(
+                        [],
+                        multiple=True,
+                        label="Anchor Column(s)"
+                    ).classes("flex-1 min-w-[200px]")
 
-                self.merge_on = ui.select(
-                    [],
-                    multiple=True,
-                    label="Merge Columns"
-                ).classes("w-full")
+                    self.group_columns = ui.select(
+                        [],
+                        multiple=True,
+                        label="Group Columns (optional)"
+                    ).classes("flex-1 min-w-[200px]")
 
-                self.group_columns = ui.select(
-                    [],
-                    multiple=True,
-                    label="Group Columns (optional)"
-                ).classes("w-full")
+                    self.output_name = ui.input(
+                        label="Merged Dataset Name"
+                    ).classes("w-64 min-w-[200px]")
 
-                self.output_name = ui.input(
-                    label="Output Dataset Name"
-                ).classes("w-full")
+                # Row 3: Action triggering & status message display
+                with ui.row().classes("w-full gap-4 items-center mt-2 flex-wrap"):
+                    ui.button("MERGE", on_click=self.run_merge).classes("w-40")
+                    self.info_label = ui.label("No merging has happened yet").classes("text-slate-600 text-sm")
 
-                with ui.row().classes("w-full gap-2"):
-                    ui.button("MERGE", on_click=self.run_merge).classes("flex-1")
+            # ============================================
+            # PREVIEW CARD (STYLE MATCHING ACTIVE DATASET CARD IN LOAD PAGE)
+            # ============================================
+            with ui.card().classes("w-full rounded-xl shadow-md p-6 gap-4"):
 
-                ui.button("EXPORT CSV", on_click=self.export_csv).classes("w-full")
+                ui.label("Merged Dataset Preview").classes("text-h6 font-bold")
 
-                self.info_label = ui.label("No merge yet")
-
-            # =========================
-            # RIGHT PANEL
-            # =========================
-            with ui.column().classes("flex-1 p-4 gap-3"):
-
-                ui.label("Merged Dataset Preview").classes("text-h6")
-
-                self.preview_container = ui.column().classes("w-full")
+                self.preview_container = ui.column().classes("w-full overflow-hidden")
 
         self.refresh_loaded_files()
         self.reference_file.on_value_change(lambda e: self.update_columns())
@@ -304,19 +297,45 @@ class mergegui:
     # DATETIME NORMALIZATION
     # =====================================================
     def normalize_datetime(self, df, col):
-        """Normalizes and sorts a DataFrame's column to datetime.
+        """Normalizes and sorts a DataFrame's column to datetime if applicable.
 
         Args:
             df: The pandas DataFrame to normalize.
             col: The column name to convert.
 
         Returns:
-            The normalized pandas DataFrame sorted by the datetime column.
+            The normalized pandas DataFrame sorted by the column.
         """
+        # If the column is already datetime type, just sort and return
+        if pd.api.types.is_datetime64_any_dtype(df[col]):
+            return df.sort_values(col)
 
-        df[col] = pd.to_datetime(df[col], errors="coerce")
-        df = df.dropna(subset=[col])
-        return df.sort_values(col)
+        # If the column is numeric (e.g. relative time in hours, float/int), do NOT convert to datetime.
+        # Just sort and return.
+        if pd.api.types.is_numeric_dtype(df[col]):
+            return df.sort_values(col)
+
+        # For object/string columns, try to parse as datetime
+        # We only apply the conversion if a significant portion (e.g. > 50%) of non-null values
+        # can be successfully parsed as datetimes. Otherwise, we keep it as is.
+        try:
+            converted = pd.to_datetime(df[col], errors="coerce", format="mixed")
+            # Calculate what percentage of non-null values were successfully parsed
+            non_null_orig = df[col].dropna()
+            if len(non_null_orig) > 0:
+                success_rate = converted.notna().sum() / len(non_null_orig)
+                if success_rate > 0.5:
+                    df[col] = converted
+                    df = df.dropna(subset=[col])
+                    return df.sort_values(col)
+        except Exception:
+            pass
+
+        # If not a datetime, just sort (or return as is if not sortable)
+        try:
+            return df.sort_values(col)
+        except Exception:
+            return df
 
     # =====================================================
     # VALIDATION
@@ -523,6 +542,29 @@ class mergegui:
             if result is None:
                 return
 
+            # Reorder columns: anchor (ref) first, then second dataset, third dataset, etc.
+            ordered_cols = []
+            # 1. Add all columns from the anchor/reference dataset that are in result
+            for col in dfs[ref].columns:
+                if col in result.columns and col not in ordered_cols:
+                    ordered_cols.append(col)
+            # 2. Add columns from other datasets in insertion order
+            for f in files:
+                if f == ref:
+                    continue
+                for col in result.columns:
+                    if col in ordered_cols:
+                        continue
+                    # Check if the column name exists in the original dataset or was renamed (ends with f"__{f}")
+                    if col in dfs[f].columns or col.endswith(f"__{f}"):
+                        ordered_cols.append(col)
+            # 3. Add any leftovers
+            for col in result.columns:
+                if col not in ordered_cols:
+                    ordered_cols.append(col)
+
+            result = result[ordered_cols]
+
             self.df = result
             self.refresh_preview()
 
@@ -539,10 +581,21 @@ class mergegui:
                 ui.notify("Dataset name already exists", type="warning")
                 return
 
+            import datetime
             self.storage["parsed_cache"][name] = result.astype(str).to_dict("records")
             self.storage["parsed_df_json"] = result.astype(str).to_dict("records")
             self.storage["parsed_df_columns"] = list(result.columns)
             self.storage["last_loaded_file"] = name
+
+            if "files" not in self.storage:
+                self.storage["files"] = {}
+            self.storage["files"][name] = {
+                "file name": name,
+                "file format": "Merged Dataset",
+                "parsed date": datetime.datetime.now().strftime(
+                    "%Y-%m-%d %H:%M:%S"
+                ),
+            }
 
             # history
             if "merge_history" not in self.storage:
@@ -565,20 +618,6 @@ class mergegui:
             ui.notify(f"Merge failed: {str(e)}", type="negative")
 
     # =====================================================
-    # EXPORT
-    # =====================================================
-    def export_csv(self):
-        """Exports the merged dataset as a downloadable CSV file."""
-
-        if self.df is None:
-            return
-
-        path = str(ensure_dirs()["exports"] / "merged_dataset.csv")
-        self.df.to_csv(path, index=False)
-
-        ui.download(path)
-
-    # =====================================================
     # PREVIEW TABLE
     # =====================================================
     def refresh_preview(self):
@@ -592,16 +631,43 @@ class mergegui:
         with self.preview_container:
 
             if self.df is None:
-                ui.label("No merged dataset")
+                ui.label("No dataset available to preview.")
                 return
 
             ui.label(f"{len(self.df)} rows | {len(self.df.columns)} columns")
 
-            ui.table(
-                columns=[
-                    {"name": c, "label": c, "field": c}
-                    for c in self.df.columns
-                ],
-                rows=self.df.head(200).astype(str).to_dict("records"),
-                pagination=10,
-            ).classes("w-full")
+            with ui.column().style("width: 100%; overflow-x: auto;"):
+                ui.table(
+                    columns=[
+                        {"name": c, "label": c, "field": c}
+                        for c in self.df.columns
+                    ],
+                    rows=self.df.head(200).astype(str).to_dict("records"),
+                    pagination=10,
+                ).classes("w-full").style("min-width: max-content;")
+
+    # =====================================================
+    # RESET
+    # =====================================================
+    def reset(self):
+        """Resets the merge page fields, selections, and preview table."""
+        self.df = None
+        if self.file_select:
+            self.file_select.value = []
+        if self.reference_file:
+            self.reference_file.value = None
+        if self.merge_type:
+            self.merge_type.value = "Column-wise"
+        if self.merge_on:
+            self.merge_on.value = []
+            self.merge_on.options = []
+            self.merge_on.update()
+        if self.group_columns:
+            self.group_columns.value = []
+            self.group_columns.options = []
+            self.group_columns.update()
+        if self.output_name:
+            self.output_name.value = ""
+        if self.info_label:
+            self.info_label.text = "No merged dataset available."
+        self.refresh_preview()

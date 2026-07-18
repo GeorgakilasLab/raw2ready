@@ -862,7 +862,7 @@ def parse_other(file_path: str, delimiter: str = "Comma") -> pd.DataFrame:
     # TRY NORMAL READ
     # -----------------------------
     try:
-        if file_path.endswith((".csv", ".txt", ".tsv")):
+        if file_path.endswith((".csv", ".txt", ".tsv", ".CSV", ".TXT", ".TSV")):
             df = pd.read_csv(
                 file_path,
                 sep=sep,
@@ -870,7 +870,7 @@ def parse_other(file_path: str, delimiter: str = "Comma") -> pd.DataFrame:
                 engine="python"
             )
 
-        elif file_path.endswith((".xls", ".xlsx")):
+        elif file_path.endswith((".xls", ".xlsx", ".XLS", ".XLSX")):
             df = pd.read_excel(file_path)
 
         else:

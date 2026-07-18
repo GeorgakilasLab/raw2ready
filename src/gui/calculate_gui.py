@@ -65,6 +65,8 @@ class calculategui:
 
         self.df = None
         self.alias_inputs = {}
+        self.filter_tiers = []
+        self.calculated_columns = []
 
         self.load_from_storage()
 
@@ -191,148 +193,95 @@ class calculategui:
             with theme.frame(frame_name):
                 self.content_()
 
-    # ---------------------------------------------------
-    def export_csv(self):
-        """Exports the current calculated DataFrame as a CSV download."""
 
-        if self.df is None:
-            ui.notify("No dataframe loaded")
-            return
-    
-        try:
-            filename = str(
-                ensure_dirs()["exports"] / "calculated_dataset.csv"
-            )
-    
-            self.df.to_csv(filename, index=False)
-    
-            ui.download(filename)
-    
-            ui.notify("CSV exported successfully")
-    
-        except Exception as e:
-            ui.notify(str(e))
     # ---------------------------------------------------
     def content_(self):
         """Renders the HTML/CSS contents of the calculation page."""
 
         self.load_from_storage()
 
-        with ui.row().classes("w-full no-wrap"):
+        with ui.column().classes("w-full gap-4"):
 
-            # ==================================================
-            # LEFT PANEL
-            # ==================================================
-            with ui.column().classes(
-                "w-[390px] p-4 gap-3 bg-slate-100"
-            ):
+            # ============================================
+            # CALCULATION SETTINGS CARD (STYLE & LAYOUT MATCHING LOAD PAGE)
+            # ============================================
+            with ui.card().classes("w-full rounded-xl shadow-md p-6 gap-4"):
 
-                ui.label("Calculate").classes("text-h5")
+                ui.label("Calculate").classes("text-h6 font-bold")
 
-                ui.label("Select Data File").classes("text-subtitle1")
-
-                with ui.row().classes("w-full items-center gap-2"):
-
+                # Row 1: File selection & Add Filtering Tier button
+                with ui.row().classes("w-full gap-4 items-center flex-wrap"):
                     self.file_selector = ui.select(
                         [],
                         label="Loaded Files",
                         with_input=True,
                         on_change=self.load_selected_file,
-                    ).classes("flex-1")
+                    ).classes("w-80 min-w-[250px]")
 
+                    with ui.row().classes("items-center gap-2 mt-4"):
+                        ui.button(
+                            icon="add",
+                            on_click=self.add_filter_tier
+                        ).props("round color=primary dense").tooltip("Add filtering tier")
+                        ui.label("Add a Filtering Tier").classes("text-sm font-bold text-slate-700")
+
+                # Dynamic filter tiers container
+                self.filter_tiers_container = ui.column().classes("w-full gap-4")
+
+                ui.separator()
+
+                # Row 2: Variable selection & aliases
+                with ui.row().classes("w-full gap-4 flex-wrap items-start"):
+                    self.var_selector = ui.select(
+                        [],
+                        label="Variables X & Y",
+                        multiple=True,
+                        with_input=True,
+                        on_change=lambda e: self.update_ui(),
+                    ).props("use-chips").classes("flex-1 min-w-[250px]")
+
+                    with ui.column().classes("w-80 min-w-[250px] gap-1"):
+                        ui.label("Aliases").classes("text-sm font-semibold text-slate-700")
+                        self.alias_box = ui.column().classes(
+                            "w-full gap-2 bg-slate-50 p-2 rounded border border-slate-200"
+                        )
+
+                ui.separator()
+
+                # Row 3: Formula & new column configuration
+                with ui.row().classes("w-full gap-4 items-center flex-wrap"):
+                    self.new_col = ui.input(
+                        label="New Column Name",
+                        placeholder="example: growth_rate"
+                    ).classes("w-64 min-w-[200px]")
+
+                    self.formula = ui.input(
+                        label="Formula",
+                        placeholder="example: A / B"
+                    ).classes("flex-1 min-w-[250px]")
+
+                    with ui.column().classes("min-w-[250px] gap-0.5 text-xs text-slate-500"):
+                        ui.label("Examples:")
+                        ui.label("A / B | log(A) | sqrt(B) | A.diff() | A.rolling(5).mean()")
+
+                # Row 4: Action buttons
+                with ui.row().classes("w-full gap-4 items-center mt-2 flex-wrap"):
                     ui.button(
-                        "REFRESH",
-                        on_click=self.refresh_files
-                    )
+                        "CALCULATE",
+                        on_click=self.calculate_expression
+                    ).classes("w-40")
 
-                self.info_label = ui.label("")
+                    self.info_label = ui.label("").classes("text-slate-600 text-sm")
 
-                # ----------------------------------------------
-                # FILTERS
-                # ----------------------------------------------
-                self.exp_col = ui.select(
-                    [],
-                    label="Experiment Column",
-                    with_input=True,
-                    on_change=lambda e: self.update_experiment_values(),
-                ).classes("w-full")
+            # ============================================
+            # PREVIEW CARD (STYLE MATCHING ACTIVE DATASET CARD IN LOAD PAGE)
+            # ============================================
+            with ui.card().classes("w-full rounded-xl shadow-md p-6 gap-4"):
 
-                self.exp_val = ui.select(
-                    [],
-                    label="Experiment Values",
-                    multiple=True,
-                    with_input=True,
-                    on_change=lambda e: self.show_filtered_table(),
-                ).props("use-chips").classes("w-full")
+                ui.label("Dataset Preview").classes("text-h6 font-bold")
 
-                self.well_selector = ui.select(
-                    [],
-                    label="Wells",
-                    multiple=True,
-                    with_input=True,
-                    on_change=lambda e: self.show_filtered_table(),
-                ).props("use-chips").classes("w-full")
-
-                # ----------------------------------------------
-                # VARIABLES
-                # ----------------------------------------------
-                self.var_selector = ui.select(
-                    [],
-                    label="Variables X & Y",
-                    multiple=True,
-                    with_input=True,
-                    on_change=lambda e: self.update_ui(),
-                ).props("use-chips").classes("w-full")
-
-                ui.label("Aliases").classes("text-sm")
-
-                self.alias_box = ui.column().classes(
-                    "w-full gap-2 bg-white p-2 rounded shadow"
-                )
-
-                self.new_col = ui.input(
-                    label="New Column Name",
-                    placeholder="example: growth_rate"
-                ).classes("w-full")
-
-                self.formula = ui.input(
-                    label="Formula",
-                    placeholder="example: A / B"
-                ).classes("w-full")
-
-                ui.label("Examples:")
-                ui.label("A / B")
-                ui.label("log(A)")
-                ui.label("sqrt(B)")
-                ui.label("A.diff()")
-                ui.label("A.rolling(5).mean()")
-
-                ui.button(
-                    "CALCULATE",
-                    on_click=self.calculate_expression
-                ).classes("w-full")
-
-                ui.button(
-                    "CLEAR",
-                    on_click=lambda: self.plot_area.clear()
-                ).classes("w-full")
-                
-                ui.button(
-                    "EXPORT",
-                    on_click=self.export_csv
-                ).classes("w-full")
-                
-                
-
-            # ==================================================
-            # RIGHT PANEL
-            # ==================================================
-            with ui.column().classes("flex-1 p-4"):
-
-                ui.label("Filtered DataFrame").classes("text-h5")
-            
                 self.preview_box = ui.column().classes(
-                    "w-full h-[720px] overflow-auto bg-white p-2 rounded shadow"
+                    "w-full h-[600px] overflow-y-auto overflow-x-auto p-2"
                 )
 
                 self.plot_area = self.preview_box
@@ -362,7 +311,7 @@ class calculategui:
             self.file_selector.value = None
             self.preview_box.clear()
             with self.preview_box:
-                ui.label("No parsed datasets available.")
+                ui.label("No dataset available to preview.")
             return
     
         # ======================================
@@ -403,34 +352,17 @@ class calculategui:
                 f"Rows: {len(self.df)} | Columns: {len(cols)}"
             )
     
-        # Experiment column selector
-        if hasattr(self, "exp_col"):
-            self.exp_col.options = cols
-            self.exp_col.update()
-    
         # Variables selector
         if hasattr(self, "var_selector"):
             self.var_selector.options = cols
             self.var_selector.update()
-    
-        # Wells selector
-        for c in cols:
-            if "well" in c.lower():
-    
-                wells = sorted(
-                    self.df[c]
-                    .dropna()
-                    .astype(str)
-                    .str.strip()
-                    .unique()
-                    .tolist()
-                )
-    
-                if hasattr(self, "well_selector"):
-                    self.well_selector.options = wells
-                    self.well_selector.update()
-    
-                break
+
+        # Update dynamic filter tiers select columns
+        for tier in self.filter_tiers:
+            tier["col_select"].options = cols
+            tier["col_select"].update()
+
+
 
     # ---------------------------------------------------
     def load_selected_file(self):
@@ -473,56 +405,21 @@ class calculategui:
                 except:
                     pass
     
+            # Reset dynamic filter tiers
+            self.filter_tiers = []
+            if hasattr(self, "filter_tiers_container") and self.filter_tiers_container:
+                self.filter_tiers_container.clear()
+
             # ================================
             # UPDATE UI
             # ================================
             self.update_selectors()
-    
-            self.preview_box.clear()
-    
-            with self.preview_box:
-    
-                ui.label(f"Rows Loaded: {len(self.df)}")
-    
-                ui.table(
-                    columns=[
-                        {"name": c, "label": c, "field": c}
-                        for c in self.df.columns
-                    ],
-                    rows=self.df.head(10).to_dict("records"),
-                    pagination=10,
-                ).classes("text-xs")
+            self.update_ui()
     
             ui.notify(f"{filename} loaded from cache")
     
         except Exception as e:
             ui.notify(f"Load error: {str(e)}")
-
-    # ---------------------------------------------------
-    def update_experiment_values(self):
-        """Updates available values for the experiment column filter based on selection."""
-
-        if self.df is None:
-            return
-
-        col = self.exp_col.value
-
-        if not col or col not in self.df.columns:
-            return
-
-        vals = sorted(
-            self.df[col]
-            .dropna()
-            .astype(str)
-            .str.strip()
-            .unique()
-            .tolist()
-        )
-
-        self.exp_val.options = vals
-        self.exp_val.update()
-
-        self.show_filtered_table()
 
     # ---------------------------------------------------
     def update_ui(self):
@@ -540,10 +437,12 @@ class calculategui:
         cols = list(self.df.columns)
 
         self.var_selector.options = cols
-        self.exp_col.options = cols
-
         self.var_selector.update()
-        self.exp_col.update()
+
+        # Update dynamic filter tiers select columns
+        for tier in self.filter_tiers:
+            tier["col_select"].options = cols
+            tier["col_select"].update()
 
         if not self.var_selector.value:
 
@@ -569,22 +468,6 @@ class calculategui:
                 self.var_selector.value = cols[:2]
         
             self.var_selector.update()
-            
-        well_col = self.get_well_column()
-
-        if well_col:
-
-            wells = sorted(
-                self.df[well_col]
-                .dropna()
-                .astype(str)
-                .str.strip()
-                .unique()
-                .tolist()
-            )
-
-            self.well_selector.options = wells
-            self.well_selector.update()
 
         self.generate_alias_inputs()
         self.show_filtered_table()
@@ -605,7 +488,7 @@ class calculategui:
 
     # ---------------------------------------------------
     def get_filtered_df(self):
-        """Applies experiment and well filters to the current DataFrame.
+        """Applies dynamic filter tiers and well filters to the current DataFrame.
 
         Returns:
             A filtered copy of the pandas DataFrame.
@@ -613,27 +496,100 @@ class calculategui:
 
         df = self.df.copy()
 
-        if (
-            self.exp_col.value
-            and self.exp_val.value
-            and self.exp_col.value in df.columns
-        ):
-            df = df[
-                df[self.exp_col.value]
-                .astype(str)
-                .isin(self.exp_val.value)
-            ]
-
-        well_col = self.get_well_column()
-
-        if well_col and self.well_selector.value:
-            df = df[
-                df[well_col]
-                .astype(str)
-                .isin(self.well_selector.value)
-            ]
+        # Apply each dynamic tier filter
+        for tier in self.filter_tiers:
+            col = tier["col_select"].value
+            vals = tier["val_select"].value
+            if col and vals and col in df.columns:
+                df = df[
+                    df[col]
+                    .astype(str)
+                    .isin(vals)
+                ]
 
         return df
+
+    # ---------------------------------------------------
+    def add_filter_tier(self):
+        """Dynamically adds a new filter tier to the Calculate page settings."""
+        if not hasattr(self, "filter_tiers_container") or not self.filter_tiers_container:
+            return
+
+        tier_idx = len(self.filter_tiers) + 1
+        cols = list(self.df.columns) if self.df is not None else []
+
+        with self.filter_tiers_container:
+            with ui.column().classes("w-full gap-1 border-t border-slate-100 pt-2") as tier_col:
+                with ui.row().classes("w-full justify-between items-center"):
+                    label_el = ui.label(f"Tier {tier_idx} Filtering").classes("text-xs font-bold text-slate-500 uppercase tracking-wider")
+                    
+                    def remove_this(t_col=tier_col, idx=tier_idx):
+                        for t in list(self.filter_tiers):
+                            if t["index"] == idx:
+                                self.filter_tiers.remove(t)
+                                break
+                        for i, t in enumerate(self.filter_tiers):
+                            new_idx = i + 1
+                            t["index"] = new_idx
+                            t["label"].text = f"Tier {new_idx} Filtering"
+                        t_col.delete()
+                        self.show_filtered_table()
+
+                    ui.button(
+                        icon="delete",
+                        on_click=remove_this
+                    ).props("flat round dense color=negative").tooltip("Remove this tier")
+
+                with ui.row().classes("w-full gap-4 items-center"):
+                    col_select = ui.select(
+                        cols,
+                        label="Select Column",
+                        with_input=True
+                    ).classes("flex-1")
+
+                    val_select = ui.select(
+                        [],
+                        label="Select Value",
+                        multiple=True,
+                        with_input=True
+                    ).props("use-chips").classes("flex-1")
+
+                tier_data = {
+                    "index": tier_idx,
+                    "label": label_el,
+                    "col_select": col_select,
+                    "val_select": val_select,
+                    "container": tier_col
+                }
+                self.filter_tiers.append(tier_data)
+
+                col_select.on_value_change(lambda e, vs=val_select, cs=col_select: self.update_tier_values(cs, vs))
+                val_select.on_value_change(lambda e: self.show_filtered_table())
+
+    def update_tier_values(self, col_select, val_select):
+        """Updates the value dropdown options for a specific dynamic filter tier."""
+        if self.df is None:
+            return
+        col = col_select.value
+        if not col or col not in self.df.columns:
+            val_select.options = []
+            val_select.value = []
+            val_select.update()
+            return
+
+        vals = sorted(
+            self.df[col]
+            .dropna()
+            .astype(str)
+            .str.strip()
+            .unique()
+            .tolist()
+        )
+        val_select.options = vals
+        val_select.value = []
+        val_select.update()
+
+        self.show_filtered_table()
 
     # ---------------------------------------------------
     def generate_alias_inputs(self):
@@ -701,6 +657,11 @@ class calculategui:
         for c in selected:
             if c not in visible_cols:
                 visible_cols.append(c)
+
+        # add calculated columns
+        for c in getattr(self, "calculated_columns", []):
+            if c in df.columns and c not in visible_cols:
+                visible_cols.append(c)
     
         # ==========================================
         # FINAL SAFETY
@@ -725,18 +686,15 @@ class calculategui:
                 "text-h6"
             )
     
-            ui.table(
-                columns=[
-                    {
-                        "name": c,
-                        "label": c,
-                        "field": c
-                    }
-                    for c in table_df.columns
-                ],
-                rows=table_df.to_dict("records"),
-                pagination=25,
-            ).classes("w-full text-xs")
+            with ui.column().style("width: 100%; overflow-x: auto;"):
+                ui.table(
+                    columns=[
+                        {"name": c, "label": c, "field": c}
+                        for c in table_df.columns
+                    ],
+                    rows=table_df.astype(str).to_dict("records"),
+                    pagination=10,
+                ).classes("w-full").style("min-width: max-content;")
 
     # ---------------------------------------------------
     def calculate_expression(self):
@@ -854,6 +812,9 @@ class calculategui:
                 filtered_df.index,
                 new_col
             ] = result
+
+            if new_col not in self.calculated_columns:
+                self.calculated_columns.append(new_col)
     
             self.current_df = self.df
     

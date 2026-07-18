@@ -3,7 +3,7 @@ general_settings:
   project_name: BioIndustry4.0
   project_logo: assets/images/raw2ready.svg
   project_logo_size: 'height: 700px; width: 700px'
-  app_title: 'Data Cleaner'
+  app_title: 'raw2ready'
   software_name: 'legacy2leaf'
   funding_logo: 'assets/images/EN-Funded by the EU-POS.png' #'assets/images/EN-Funded by the EU-POS.png'
   organisation_logo: 'assets/images/WUR_ZW_standard_2021.png'

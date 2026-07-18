@@ -91,6 +91,7 @@ class main_page:
 
         self.main_tabs = None
         self.main_panels = None
+        self.current_tab = "dashboard"
 
         self.lbl_files = None
         self.lbl_rows = None
@@ -228,19 +229,13 @@ class main_page:
                         files_obj.keys()
                     )[-1]
 
-            rows_count = len(
-                self.storage_container.get(
-                    "df_json",
-                    [],
-                )
-            )
-
-            cols_count = len(
-                self.storage_container.get(
-                    "df_columns",
-                    [],
-                )
-            )
+            # Sum rows and columns from all loaded datasets
+            parsed_cache = self.storage_container.get("parsed_cache", {})
+            for records in parsed_cache.values():
+                num_rows = len(records)
+                rows_count += num_rows
+                if num_rows > 0:
+                    cols_count += len(records[0])
 
         except Exception as e:
             logger.warning(f"stats error: {e}")
@@ -653,8 +648,7 @@ class main_page:
 
             with ui.card().classes(
                 "w-full rounded-3xl shadow-2xl "
-                "bg-gradient-to-r from-blue-700 "
-                "via-cyan-500 to-sky-500 text-white"
+                "bg-gradient-to-r from-[#64748B] via-[#63B3ED] to-[#4FD1C5] text-white"
             ):
 
                 with ui.row().classes(
@@ -737,10 +731,8 @@ class main_page:
             ):
 
                 ui.label(
-                    "Loaded Datasets Matrix"
-                ).classes(
-                    "text-xl font-bold mb-4 text-slate-800"
-                )
+                    "Loaded Datasets"
+                ).classes("text-h6 font-bold")
 
                 columns = [
                     {
@@ -788,6 +780,7 @@ class main_page:
         """Renders the HTML/CSS contents of the main dashboard page, tab bar, and inner panels."""
 
         ui.add_head_html("""
+        <link rel="icon" type="image/svg+xml" href="/assets/images/raw2ready_favicon.svg?v=3">
         <style>
         body{
             background:#f8fafc;
@@ -814,6 +807,9 @@ class main_page:
         .q-tab--active{
             background:rgba(255,255,255,0.12);
         }
+        .q-uploader__list {
+            display: none !important;
+        }
         </style>
         """)
 
@@ -823,7 +819,7 @@ class main_page:
 
             # SIDEBAR
             with ui.column().classes(
-                "w-72 h-full bg-slate-900 text-white p-4"
+                "w-72 h-full bg-[#2e2e2e] text-white p-4"
             ):
 
                 with ui.row().classes(
@@ -880,10 +876,21 @@ class main_page:
                                 icon=icon,
                             )
 
+                ui.separator().classes("my-2")
+
+                with ui.row().classes(
+                    "w-full bg-white p-2 rounded-xl mt-2 justify-center items-center"
+                ):
+                    ui.image(
+                        f"/{theme.themes_['funding_logo']}"
+                    ).classes(
+                        "w-full h-10"
+                    ).props("fit=contain")
+
                 ui.label(
-                    "Version 2026"
+                    "Version 1.0"
                 ).classes(
-                    "text-xs text-slate-400 mt-3"
+                    "text-xs text-slate-400 mt-1 text-center w-full"
                 )
 
             # MAIN AREA
@@ -899,6 +906,17 @@ class main_page:
                 ) as panels:
 
                     self.main_panels = panels
+
+                    def on_tab_change(e):
+                        prev = self.current_tab
+                        self.current_tab = e.value
+                        if prev == "merge" and hasattr(self, "merge_page") and self.merge_page:
+                            try:
+                                self.merge_page.reset()
+                            except Exception as ex:
+                                logger.warning(f"Error resetting merge page: {ex}")
+
+                    panels.on_value_change(on_tab_change)
 
                     with ui.tab_panel("dashboard"):
                         self.dashboard()

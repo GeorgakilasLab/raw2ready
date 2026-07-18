@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 170" width="100%" height="100%" style="overflow: visible;">
+  <defs>
+    <!-- Gradient: Light Blue to Teal (used for the harmonized grid and "2ready" text) -->
+    <linearGradient id="readyGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#63B3ED" />
+      <stop offset="100%" stop-color="#4FD1C5" />
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect x="0" y="0" width="760" height="170" fill="#F8FAFC" rx="16"/>
+
+  <!-- THE DATA SWARM -->
+  
+  <!-- Stages 1 & 2: Raw & Transitioning (Solid Slate Gray matching "raw") -->
+  <g fill="#64748B">
+    <!-- Stage 1: Scattered (Wide vertical spread) -->
+    <circle cx="65" cy="140" r="5"/>
+    <circle cx="69" cy="55" r="7"/>
+    <circle cx="80" cy="105" r="10"/>
+    <circle cx="90" cy="20" r="6"/>
+    <circle cx="97" cy="70" r="12"/>
+    <circle cx="105" cy="150" r="9"/>
+    <circle cx="112" cy="95" r="5"/>
+    <circle cx="122" cy="25" r="11"/>
+    <circle cx="130" cy="125" r="7"/>
+
+    <!-- Stage 2: Funneling (Rightmost dots exactly match the 50-120 height of the grid) -->
+    <circle cx="145" cy="42" r="7"/>
+    <circle cx="150" cy="132" r="8"/>
+    <circle cx="158" cy="80" r="10"/>
+    <circle cx="168" cy="108" r="6"/>
+    <circle cx="180" cy="50" r="8"/>  <!-- Aligned to top row of grid -->
+    <circle cx="192" cy="85" r="8"/>  <!-- Aligned to middle row of grid -->
+    <circle cx="184" cy="120" r="8"/> <!-- Aligned to bottom row of grid -->
+  </g>
+
+  <!-- Stage 3: Harmonized & AI-Ready Grid (Gradient matching "2ready") -->
+  <g fill="url(#readyGrad)">
+    <!-- Top Row -->
+    <circle cx="210" cy="50" r="9"/>
+    <circle cx="245" cy="50" r="9"/>
+    <circle cx="280" cy="50" r="9"/>
+    
+    <!-- Middle Row -->
+    <circle cx="210" cy="85" r="9"/>
+    <circle cx="245" cy="85" r="9"/>
+    <circle cx="280" cy="85" r="9"/>
+    
+    <!-- Bottom Row -->
+    <circle cx="210" cy="120" r="9"/>
+    <circle cx="245" cy="120" r="9"/>
+    <circle cx="280" cy="120" r="9"/>
+  </g>
+
+  <!-- TYPOGRAPHY -->
+  <text x="320" y="112" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif" font-size="80" font-weight="700" letter-spacing="-2">
+    <tspan fill="#64748B">raw</tspan><tspan fill="url(#readyGrad)">2ready</tspan>
+  </text>
+</svg>

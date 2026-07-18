@@ -270,6 +270,6 @@ if __name__ in {
         storage_secret="raw2ready_secret_key",
         reload=True,
         reconnect_timeout=60,
-        favicon="src/assets/images/raw2ready.svg",
+        favicon="src/assets/images/raw2ready_favicon.svg",
     )
 
