@@ -359,6 +359,10 @@ def parse_biolector_xt(raw_path):
             for c in df.columns
         ]
 
+        # Drop the 3 metadata sub-headers (analyte, calibration, well)
+        if len(df) > 3:
+            df = df.iloc[3:].reset_index(drop=True)
+
         return df
 
     # ==========================================================
@@ -476,7 +480,7 @@ def parse_biolector_xt(raw_path):
                 master_df["time [h]"],
                 unit="h"
             )
-        )
+        ).dt.round("s")
 
     else:
 
@@ -494,7 +498,7 @@ def parse_biolector_xt(raw_path):
                 master_df["time [h]"],
                 unit="h"
             )
-        )
+        ).dt.round("s")
 
     # ==========================================================
     # DETECT WELLS

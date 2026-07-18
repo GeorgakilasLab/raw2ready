@@ -915,6 +915,16 @@ class main_page:
                                 self.merge_page.reset()
                             except Exception as ex:
                                 logger.warning(f"Error resetting merge page: {ex}")
+                        if e.value == "load" and hasattr(self, "load_page") and self.load_page:
+                            try:
+                                self.load_page.reset()
+                            except Exception as ex:
+                                logger.warning(f"Error resetting load page: {ex}")
+                        if e.value == "calculate" and hasattr(self, "calculate_page") and self.calculate_page:
+                            try:
+                                self.calculate_page.reset()
+                            except Exception as ex:
+                                logger.warning(f"Error resetting calculate page: {ex}")
 
                     panels.on_value_change(on_tab_change)
 

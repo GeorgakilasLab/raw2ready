@@ -12,6 +12,7 @@ import plotly.express as px
 
 import src.utils.theme as theme
 from src.utils.logging_config import get_logger
+import src.utils.tools as ut_tools
 
 logger = get_logger("plot_gui")
 
@@ -284,7 +285,8 @@ class plotgui:
                 ui.notify("Dataset not found in cache")
                 return
     
-            df = pd.DataFrame(cached)
+            cached_dtypes = self.storage.get("parsed_cache_dtypes", {}).get(fname, {})
+            df = ut_tools.restore_dataframe(cached, cached_dtypes)
     
             self.df = df.copy()
             self.current_df = df.copy()
@@ -310,7 +312,7 @@ class plotgui:
                             {"name": c, "label": c, "field": c}
                             for c in self.df.columns
                         ],
-                        rows=self.df.head(10).to_dict("records"),
+                        rows=self.df.head(10).astype(str).to_dict("records"),
                         pagination=10,
                     ).classes("w-full text-xs").style("min-width: max-content;")
     
@@ -433,12 +435,6 @@ class plotgui:
                 return
     
         df = self.df.copy()
-        
-        for c in df.columns:
-            try:
-                df[c] = pd.to_numeric(df[c])
-            except:
-                pass
     
         # -----------------------------------------
         # FILTER EXPERIMENTS

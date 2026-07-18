@@ -10,6 +10,7 @@ import traceback
 
 import src.utils.theme as theme
 from src.utils.logging_config import get_logger
+import src.utils.tools as ut_tools
 
 logger = get_logger("merge_gui")
 
@@ -189,9 +190,10 @@ class mergegui:
         """
 
         cache = self.storage.get("parsed_cache", {})
+        dtypes_cache = self.storage.get("parsed_cache_dtypes", {})
 
         if name in cache:
-            return pd.DataFrame(cache[name])
+            return ut_tools.restore_dataframe(cache[name], dtypes_cache.get(name, {}))
 
         return None
 
@@ -576,13 +578,22 @@ class mergegui:
 
             if "parsed_cache" not in self.storage:
                 self.storage["parsed_cache"] = {}
+            if "parsed_cache_dtypes" not in self.storage:
+                self.storage["parsed_cache_dtypes"] = {}
 
             if name in self.storage["parsed_cache"]:
                 ui.notify("Dataset name already exists", type="warning")
                 return
 
             import datetime
-            self.storage["parsed_cache"][name] = result.astype(str).to_dict("records")
+            # Ensure it is json safe
+            # Just manual convert for now since make_json_safe is not in merge
+            store_result = result.copy()
+            for c in store_result.select_dtypes(include=["datetime", "datetimetz", "timedelta"]).columns:
+                store_result[c] = store_result[c].astype(str)
+
+            self.storage["parsed_cache"][name] = store_result.to_dict("records")
+            self.storage["parsed_cache_dtypes"][name] = result.dtypes.astype(str).to_dict()
             self.storage["parsed_df_json"] = result.astype(str).to_dict("records")
             self.storage["parsed_df_columns"] = list(result.columns)
             self.storage["last_loaded_file"] = name

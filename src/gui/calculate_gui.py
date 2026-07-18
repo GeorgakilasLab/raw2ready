@@ -11,6 +11,7 @@ import numpy as np
 import src.utils.theme as theme
 from src.utils.logging_config import get_logger
 from src.utils.paths import ensure_dirs
+import src.utils.tools as ut_tools
 
 logger = get_logger("calculate_gui")
 
@@ -213,7 +214,7 @@ class calculategui:
                 with ui.row().classes("w-full gap-4 items-center flex-wrap"):
                     self.file_selector = ui.select(
                         [],
-                        label="Loaded Files",
+                        label="Select Dataset",
                         with_input=True,
                         on_change=self.load_selected_file,
                     ).classes("w-80 min-w-[250px]")
@@ -234,7 +235,7 @@ class calculategui:
                 with ui.row().classes("w-full gap-4 flex-wrap items-start"):
                     self.var_selector = ui.select(
                         [],
-                        label="Variables X & Y",
+                        label="Select Variables",
                         multiple=True,
                         with_input=True,
                         on_change=lambda e: self.update_ui(),
@@ -251,7 +252,7 @@ class calculategui:
                 # Row 3: Formula & new column configuration
                 with ui.row().classes("w-full gap-4 items-center flex-wrap"):
                     self.new_col = ui.input(
-                        label="New Column Name",
+                        label="New Variable Name",
                         placeholder="example: growth_rate"
                     ).classes("w-64 min-w-[200px]")
 
@@ -281,7 +282,7 @@ class calculategui:
                 ui.label("Dataset Preview").classes("text-h6 font-bold")
 
                 self.preview_box = ui.column().classes(
-                    "w-full h-[600px] overflow-y-auto overflow-x-auto p-2"
+                    "w-full overflow-hidden"
                 )
 
                 self.plot_area = self.preview_box
@@ -322,7 +323,7 @@ class calculategui:
         if last in files:
             selected = last
         else:
-            selected = files[0]
+            selected = None
     
         # ======================================
         # SET VALUE ONLY IF CHANGED
@@ -335,7 +336,8 @@ class calculategui:
         # ======================================
         # LOAD DATA FROM CACHE (NO PARSE)
         # ======================================
-        self.load_selected_file()
+        if selected:
+            self.load_selected_file()
     
     # ---------------------------------------------------
     def update_selectors(self):
@@ -355,6 +357,7 @@ class calculategui:
         # Variables selector
         if hasattr(self, "var_selector"):
             self.var_selector.options = cols
+            self.var_selector.value = []
             self.var_selector.update()
 
         # Update dynamic filter tiers select columns
@@ -372,7 +375,6 @@ class calculategui:
             filename = self.file_selector.value
     
             if not filename:
-                ui.notify("No file selected")
                 return
     
             # ================================
@@ -385,7 +387,8 @@ class calculategui:
                 return
     
             # reconstruct dataframe
-            df = pd.DataFrame(cached)
+            cached_dtypes = self.storage.get("parsed_cache_dtypes", {}).get(filename, {})
+            df = ut_tools.restore_dataframe(cached, cached_dtypes)
     
             self.df = df.copy()
             self.current_df = df.copy()
@@ -399,16 +402,20 @@ class calculategui:
             # ================================
             self.df.columns = self.df.columns.astype(str).str.strip()
     
-            for c in self.df.columns:
-                try:
-                    self.df[c] = pd.to_numeric(self.df[c])
-                except:
-                    pass
-    
             # Reset dynamic filter tiers
             self.filter_tiers = []
             if hasattr(self, "filter_tiers_container") and self.filter_tiers_container:
                 self.filter_tiers_container.clear()
+
+            # Reset formula and alias fields
+            self.calculated_columns = []
+            self.alias_inputs = {}
+            if self.new_col:
+                self.new_col.value = ""
+            if self.formula:
+                self.formula.value = ""
+            if self.alias_box:
+                self.alias_box.clear()
 
             # ================================
             # UPDATE UI
@@ -426,7 +433,7 @@ class calculategui:
         """Updates the general UI parameters and options based on current DataFrame state."""
 
         if self.df is None:
-            self.info_label.text = "No dataframe loaded"
+            self.info_label.text = "No dataset loaded."
             return
 
         self.info_label.text = (
@@ -444,30 +451,7 @@ class calculategui:
             tier["col_select"].options = cols
             tier["col_select"].update()
 
-        if not self.var_selector.value:
 
-            numeric = self.df.select_dtypes(
-                include=np.number
-            ).columns.tolist()
-        
-            # remove helper columns
-            numeric = [
-                c for c in numeric
-                if "time" not in c.lower()
-                and "date" not in c.lower()
-            ]
-        
-            if len(numeric) >= 2:
-                self.var_selector.value = numeric[:2]
-        
-            elif len(numeric) == 1:
-                self.var_selector.value = numeric
-        
-            else:
-                # fallback first 2 columns
-                self.var_selector.value = cols[:2]
-        
-            self.var_selector.update()
 
         self.generate_alias_inputs()
         self.show_filtered_table()
@@ -614,85 +598,37 @@ class calculategui:
 
     # ---------------------------------------------------
     def show_filtered_table(self):
-        """Displays the filtered DataFrame inside the NiceGUI preview table."""
+        """Refreshes the dataset preview table.
 
-        if self.df is None:
+        Follows the same pattern as merge_gui.refresh_preview:
+        clear container, show stats, render ALL columns with
+        horizontal scrolling and pagination.
+        """
+
+        if not self.preview_box:
             return
-    
-        self.plot_area.clear()
-    
-        df = self.get_filtered_df()
-    
-        # ==========================================
-        # SAFE SELECTED COLUMNS
-        # ==========================================
-        selected = self.var_selector.value or []
-    
-        # keep only columns that actually exist
-        selected = [
-            c for c in selected
-            if c in df.columns
-        ]
-    
-        # ==========================================
-        # AUTO ADD IMPORTANT COLUMNS
-        # ==========================================
-        visible_cols = []
-    
-        important_patterns = [
-            "time",
-            "datetime",
-            "well",
-            "protocol"
-        ]
-    
-        for c in df.columns:
-    
-            cl = str(c).lower()
-    
-            if any(p in cl for p in important_patterns):
-                visible_cols.append(c)
-    
-        # add selected columns
-        for c in selected:
-            if c not in visible_cols:
-                visible_cols.append(c)
 
-        # add calculated columns
-        for c in getattr(self, "calculated_columns", []):
-            if c in df.columns and c not in visible_cols:
-                visible_cols.append(c)
-    
-        # ==========================================
-        # FINAL SAFETY
-        # ==========================================
-        valid_cols = [
-            c for c in visible_cols
-            if c in df.columns
-        ]
-    
-        # fallback
-        if not visible_cols:
-            visible_cols = list(df.columns)
-    
-        table_df = df[valid_cols].copy()
-    
-        # ==========================================
-        # TABLE UI
-        # ==========================================
-        with self.plot_area:
-    
-            ui.label("Filtered DataFrame").classes(
-                "text-h6"
+        self.preview_box.clear()
+
+        with self.preview_box:
+
+            if self.df is None:
+                ui.label("No dataset available to preview.")
+                return
+
+            df = self.get_filtered_df()
+
+            ui.label(
+                f"{len(df)} rows | {len(df.columns)} columns"
             )
-    
+
             with ui.column().style("width: 100%; overflow-x: auto;"):
                 ui.table(
                     columns=[
                         {"name": c, "label": c, "field": c}
-                        for c in table_df.columns
+                        for c in df.columns
                     ],
-                    rows=table_df.astype(str).to_dict("records"),
+                    rows=df.head(200).astype(str).to_dict("records"),
                     pagination=10,
                 ).classes("w-full").style("min-width: max-content;")
 
@@ -819,18 +755,27 @@ class calculategui:
             self.current_df = self.df
     
             # ---------------------------------
+            # PRESERVE DATETIME COLUMNS
+            # ---------------------------------
+            store_df = self.df.copy()
+            for c in store_df.columns:
+                if pd.api.types.is_datetime64_any_dtype(store_df[c]):
+                    store_df[c] = store_df[c].astype(str)
+
+            # ---------------------------------
             # GLOBAL JSON SAFE STORAGE
             # ---------------------------------
-            self.storage["df_json"] = self.df.to_dict(orient="records")
+            safe_records = store_df.to_dict(orient="records")
+            self.storage["df_json"] = safe_records
             self.storage["df_columns"] = list(self.df.columns)
             
-            self.storage["parsed_df_json"] = self.storage["df_json"]
+            self.storage["parsed_df_json"] = safe_records
             self.storage["parsed_df_columns"] = self.storage["df_columns"]
             
-            self.storage["loaded_df_json"] = self.storage["df_json"]
+            self.storage["loaded_df_json"] = safe_records
             self.storage["loaded_df_columns"] = self.storage["df_columns"]
             
-            self.storage["data_json"] = self.storage["df_json"]
+            self.storage["data_json"] = safe_records
             self.storage["data_columns"] = self.storage["df_columns"]
     
             # ---------------------------------
@@ -843,16 +788,20 @@ class calculategui:
                 if "parsed_cache" not in self.storage:
                     self.storage["parsed_cache"] = {}
             
+                if "parsed_cache_dtypes" not in self.storage:
+                    self.storage["parsed_cache_dtypes"] = {}
+                
                 self.storage["parsed_cache"][
                     current_file
-                ] = self.df.to_dict(
-                    orient="records"
-                )
+                ] = safe_records
+                self.storage["parsed_cache_dtypes"][
+                    current_file
+                ] = store_df.dtypes.astype(str).to_dict()
     
             # ---------------------------------
             # REFRESH UI
             # ---------------------------------
-            self.update_ui()
+            self.show_filtered_table()
     
             ui.notify(
                 f"Column '{new_col}' created successfully",
@@ -867,3 +816,45 @@ class calculategui:
                 f"Calculation error: {str(e)}",
                 type="negative"
             )
+
+    # ==================================================
+    # RESET ON VISIT
+    # ==================================================
+    def reset(self):
+        """Resets all fields, filter tiers, inputs, and preview tables on the Calculate page."""
+        self.df = None
+        self.filter_tiers = []
+        self.alias_inputs = {}
+        self.calculated_columns = []
+        
+        # Clear storage reference
+        self.storage["last_loaded_file"] = None
+
+        if self.file_selector:
+            self.file_selector.value = None
+            self.refresh_files()
+
+        if self.filter_tiers_container:
+            self.filter_tiers_container.clear()
+
+        if self.var_selector:
+            self.var_selector.value = []
+            self.var_selector.options = []
+            self.var_selector.update()
+
+        if self.alias_box:
+            self.alias_box.clear()
+
+        if self.new_col:
+            self.new_col.value = ""
+
+        if self.formula:
+            self.formula.value = ""
+
+        if self.info_label:
+            self.info_label.text = "No dataframe loaded"
+
+        if self.preview_box:
+            self.preview_box.clear()
+            with self.preview_box:
+                ui.label("No dataset available to preview.")

@@ -75,3 +75,24 @@ def load_config(configuration_file, dump_indentation = 4):
 #-----------------------
 # CLASSES
 #-----------------------
+
+import pandas as pd
+
+def restore_dataframe(cached_data: list, cached_dtypes: dict) -> pd.DataFrame:
+    """Restores a pandas DataFrame from a list of records and a dictionary of dtypes."""
+    df = pd.DataFrame(cached_data)
+    if not cached_dtypes:
+        return df
+        
+    for col, dtype_name in cached_dtypes.items():
+        if col in df.columns:
+            if "datetime" in dtype_name:
+                df[col] = pd.to_datetime(df[col], errors="coerce")
+            elif "timedelta" in dtype_name:
+                df[col] = pd.to_timedelta(df[col], errors="coerce")
+            else:
+                try:
+                    df[col] = df[col].astype(dtype_name)
+                except Exception:
+                    pass
+    return df

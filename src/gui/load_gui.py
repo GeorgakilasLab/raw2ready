@@ -19,6 +19,7 @@ pd.set_option("future.no_silent_downcasting", True)
 import src.utils.theme as theme
 from src.utils.logging_config import get_logger
 from src.utils.paths import ensure_dirs
+import src.utils.tools as ut_tools
 
 
 # REAL BACKEND PARSER
@@ -255,7 +256,7 @@ class loadgui:
 
         with ui.card().classes("w-full rounded-xl shadow-md"):
     
-            ui.label("Upload Data File").classes("text-h6 font-bold")
+            ui.label("Upload Data Files").classes("text-h6 font-bold")
     
             # =========================
             # SETTINGS ROW
@@ -341,7 +342,7 @@ class loadgui:
                 "w-full p-4 bg-slate-50 border border-slate-200 mt-4 gap-2"
             ) as self.upload_box:
                 
-                ui.label("Upload Files").classes(
+                ui.label("Upload Data Files").classes(
                     "text-sm font-bold text-slate-700"
                 )
 
@@ -470,9 +471,10 @@ class loadgui:
         # LOAD FROM CACHE (NO PARSE)
         # =========================
         cached = self.storage.get("parsed_cache", {}).get(filename)
+        cached_dtypes = self.storage.get("parsed_cache_dtypes", {}).get(filename, {})
     
         if cached:
-            df = pd.DataFrame(cached)
+            df = ut_tools.restore_dataframe(cached, cached_dtypes)
     
             df = self.make_json_safe(df)
     
@@ -486,6 +488,8 @@ class loadgui:
             def do_refresh():
                 self.save_current_to_cache()
                 self.refresh_status()
+                if self.parent and hasattr(self.parent, "refresh_all_pages"):
+                    self.parent.refresh_all_pages()
                 ui.notify(f"{filename} loaded instantly (cached)", type="info")
             self.run_timer(0, do_refresh, once=True)
     
@@ -838,10 +842,10 @@ class loadgui:
     def make_json_safe(self, df):
         df = df.copy()
     
-        # Only convert datetime columns
-        datetime_cols = df.select_dtypes(include=["datetime64[ns]", "datetime64[ns, UTC]"]).columns
+        # Convert datetime and timedelta columns to string for JSON serialization
+        time_cols = df.select_dtypes(include=["datetime", "datetimetz", "timedelta"]).columns
         
-        for col in datetime_cols:
+        for col in time_cols:
             df[col] = df[col].astype(str)
     
         return df
@@ -931,24 +935,30 @@ class loadgui:
             # -------------------------
             if "parsed_cache" not in self.storage:
                 self.storage["parsed_cache"] = {}
+            if "parsed_cache_dtypes" not in self.storage:
+                self.storage["parsed_cache_dtypes"] = {}
             
             df_safe = self.make_json_safe(df)
             
             self.storage["parsed_cache"][self.filename] = df_safe.to_dict(
                 orient="records"
             )
+            self.storage["parsed_cache_dtypes"][self.filename] = df.dtypes.astype(str).to_dict()
             
             # -------------------------
             # STORE ORIGINAL SNAPSHOT (NEW)
             # -------------------------
             if "original_cache" not in self.storage:
                 self.storage["original_cache"] = {}
+            if "original_cache_dtypes" not in self.storage:
+                self.storage["original_cache_dtypes"] = {}
             
             df_original = df_safe.copy()
             
             self.storage["original_cache"][self.filename] = df_original.to_dict(
                 orient="records"
             )
+            self.storage["original_cache_dtypes"][self.filename] = self.storage["parsed_cache_dtypes"][self.filename]
     
             # -------------------------
             # SET ACTIVE DF
@@ -1022,10 +1032,14 @@ class loadgui:
         df_safe = self.make_json_safe(self.current_df)
         
         self.storage["parsed_cache"][self.filename] = df_safe.to_dict(orient="records")
+        if "parsed_cache_dtypes" not in self.storage:
+            self.storage["parsed_cache_dtypes"] = {}
+        self.storage["parsed_cache_dtypes"][self.filename] = self.current_df.dtypes.astype(str).to_dict()
         
         # ALSO UPDATE ACTIVE STORAGE (IMPORTANT)
         self.storage["parsed_df_json"] = df_safe.to_dict(orient="records")
         self.storage["parsed_df_columns"] = list(df_safe.columns)
+        self.storage["parsed_df_dtypes"] = self.storage["parsed_cache_dtypes"][self.filename]
         self.storage["parsed_filename"] = self.filename
         
         self.show_uploaded_files()
@@ -1886,7 +1900,8 @@ class loadgui:
             # -------------------------
             # RESTORE DATAFRAME
             # -------------------------
-            df = pd.DataFrame(original_cache[filename])
+            original_dtypes = self.storage.get("original_cache_dtypes", {})
+            df = ut_tools.restore_dataframe(original_cache[filename], original_dtypes.get(filename, {}))
             df = self.make_json_safe(df)
     
             # -------------------------
@@ -1901,8 +1916,11 @@ class loadgui:
             # -------------------------
             if "parsed_cache" not in self.storage:
                 self.storage["parsed_cache"] = {}
-    
+            if "parsed_cache_dtypes" not in self.storage:
+                self.storage["parsed_cache_dtypes"] = {}
+            
             self.storage["parsed_cache"][filename] = df.to_dict("records")
+            self.storage["parsed_cache_dtypes"][filename] = df.dtypes.astype(str).to_dict()
     
             # -------------------------
             # SAVE GLOBAL STATE
@@ -2050,7 +2068,7 @@ class loadgui:
                             }
                         ],
     
-                        rows=report_df.to_dict(
+                        rows=report_df.astype(str).to_dict(
                             "records"
                         ),
     
@@ -2160,7 +2178,7 @@ class loadgui:
                         {"name": c, "label": c, "field": c}
                         for c in df.columns
                     ],
-                    rows=df.to_dict("records"),
+                    rows=df.head(200).astype(str).to_dict("records"),
                     pagination=10,
                 ).classes("w-full").style("min-width: max-content;")
             
@@ -2236,3 +2254,17 @@ class loadgui:
         ui.notify("Memory fully cleared", type="info")
         if self.parent and hasattr(self.parent, "refresh_all_pages"):
             self.parent.refresh_all_pages()
+
+    # ==================================================
+    # RESET SELECTION ON VISIT
+    # ==================================================
+    def reset(self):
+        """Resets the active dataset selection so that no dataset is pre-selected."""
+        self.storage["last_loaded_file"] = None
+        self.filename = None
+        self.current_df = None
+        self.df = None
+        self.original_df = None
+        
+        self.refresh_status()
+        self.show_uploaded_files()
