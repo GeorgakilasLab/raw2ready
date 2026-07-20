@@ -1038,6 +1038,8 @@ class NewProtocol:
         # DOWNLOAD FILE
         # =============================================
         ui.download(path)
+        if self.parent and hasattr(self.parent, "refresh_all_pages"):
+            self.parent.refresh_all_pages()
         
     # =====================================================
     # CLEAR EVERYTHING

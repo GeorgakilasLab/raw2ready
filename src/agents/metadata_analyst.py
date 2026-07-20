@@ -8,7 +8,12 @@ import json
 import re
 import traceback
 
-from langchain_ollama import OllamaLLM
+import os
+from pydantic_ai import Agent, ModelSettings
+from pydantic_ai.models.ollama import OllamaModel
+
+
+from pydantic_ai.providers.ollama import OllamaProvider
 
 
 class MetadataAnalystAgent:
@@ -18,7 +23,6 @@ class MetadataAnalystAgent:
         model_name: Name of the LLM.
         temperature: LLM temperature parameter.
         debug: True if debug prints are enabled.
-        llm: Language model client.
     """
     # =====================================================
     # INIT
@@ -45,9 +49,13 @@ class MetadataAnalystAgent:
         print(f"MODEL: {model_name}")
         print(f"TEMPERATURE: {temperature}")
         print("[METADATA ANALYST] Agent summary enabled")
-        self.llm = OllamaLLM(
-            model=model_name,
-            temperature=temperature
+        
+        base_url = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434/v1")
+        provider = OllamaProvider(base_url=base_url)
+        model = OllamaModel(model_name=model_name, provider=provider)
+        self.agent = Agent(
+            model=model,
+            model_settings=ModelSettings(temperature=temperature)
         )
         print("[METADATA ANALYST] READY")
         print("=" * 100 + "\n")
@@ -449,7 +457,8 @@ Do not output raw JSON.
             )
             try:
                 print("[METADATA ANALYST] INVOKING OLLAMA...")
-                assessment = self.llm.invoke(prompt)
+                result = self.agent.run_sync(prompt)
+                assessment = result.data
                 status = "success"
                 print("[METADATA ANALYST] OLLAMA SUCCESS")
             except Exception as ex:

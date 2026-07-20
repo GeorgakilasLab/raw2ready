@@ -8,7 +8,16 @@ import re
 import traceback
 import numpy as np
 import pandas as pd
-from langchain_ollama import OllamaLLM
+import os
+from dataclasses import dataclass
+from pydantic_ai import Agent, RunContext, ModelSettings
+from pydantic_ai.models.ollama import OllamaModel
+
+from pydantic_ai.providers.ollama import OllamaProvider
+
+@dataclass
+class DatasetAnalystDeps:
+    df: pd.DataFrame
 
 class DataAnalystAgent:
     """Analyzes experimental fermentation datasets.
@@ -17,7 +26,6 @@ class DataAnalystAgent:
         model_name: Name of the LLM.
         temperature: LLM temperature parameter.
         debug: True if debug prints are enabled.
-        llm: Language model client.
     """
     def __init__(
         self,
@@ -41,10 +49,46 @@ class DataAnalystAgent:
         print(f"MODEL: {model_name}")
         print(f"TEMPERATURE: {temperature}")
         print("[DATA ANALYST] Agent summary enabled")
-        self.llm = OllamaLLM(
-            model=model_name,
-            temperature=temperature
+        
+        base_url = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434/v1")
+        provider = OllamaProvider(base_url=base_url)
+        model = OllamaModel(model_name=model_name, provider=provider)
+        
+        self.agent = Agent(
+            model=model,
+            model_settings=ModelSettings(temperature=temperature)
         )
+        
+        self.code_agent = Agent(
+            model=model,
+            deps_type=DatasetAnalystDeps,
+            model_settings=ModelSettings(temperature=temperature),
+            system_prompt=(
+                "You are an expert bioprocess data analyst. Your job is to answer the user's query "
+                "by executing Python/pandas expressions or queries on the DataFrame. "
+                "You MUST use the `query_dataframe` tool to inspect column metadata, statistics, "
+                "or run code on the DataFrame `df`. When asked about summary statistics, correlations, "
+                "subsets, or value counts, construct appropriate python expressions and call `query_dataframe`."
+            )
+        )
+        
+        # Bind the tool to the code agent
+        @self.code_agent.tool
+        def query_dataframe(ctx: RunContext[DatasetAnalystDeps], python_expression: str) -> str:
+            """Executes a pandas python expression on the dataframe and returns the result as a string.
+            
+            Args:
+                python_expression: A valid Python expression targeting `df`. Example: `df.describe().to_string()`
+                                   or `df.corr(numeric_only=True).to_string()` or `df.head().to_string()`.
+            """
+            df = ctx.deps.df
+            try:
+                local_vars = {"df": df, "pd": pd, "np": np}
+                result = eval(python_expression, {"__builtins__": None, "pd": pd, "np": np}, local_vars)
+                return str(result)
+            except Exception as e:
+                return f"Error executing expression: {e}"
+        
         print("[DATA ANALYST] READY")
         print("=" * 100 + "\n")
     def debug_print(self, title, data):
@@ -455,11 +499,32 @@ Keep the assessment concise but scientifically useful.
         structured_data["agent_summary"] = agent_summary
         self.debug_print("STRUCTURED DATA", structured_data)
         if use_llm:
+            try:
+                print("[DATA ANALYST] RUNNING CODE AGENT...")
+                code_query = (
+                    f"The user wants to know: '{query}'.\n"
+                    "Please query the dataframe using your query_dataframe tool. "
+                    "You can inspect summary statistics, calculate correlations, view column names, "
+                    "or isolate rows/columns to answer the user's query. "
+                    "Write a clear explanation of what you found."
+                )
+                code_result = self.code_agent.run_sync(
+                    code_query,
+                    deps=DatasetAnalystDeps(df=dataframe)
+                )
+                pandas_analysis = code_result.data
+                print("[DATA ANALYST] CODE AGENT SUCCESS")
+            except Exception as e:
+                print(f"[DATA ANALYST WARNING] Code agent failed: {e}")
+                pandas_analysis = "Code execution analysis failed or skipped."
+
+            structured_data["pandas_agent_analysis"] = pandas_analysis
             prompt = self.build_prompt(query, structured_data)
             self.debug_print("DATA ANALYST PROMPT", prompt)
             try:
                 print("[DATA ANALYST] INVOKING OLLAMA...")
-                assessment = self.llm.invoke(prompt)
+                result = self.agent.run_sync(prompt)
+                assessment = result.data
                 status = "success"
                 print("[DATA ANALYST] OLLAMA SUCCESS")
             except Exception as ex:

@@ -11,7 +11,6 @@ import os
 from datetime import datetime
 
 from src.agents.data_analyst import DataAnalystAgent
-from src.agents.literature_reviewer import LiteratureReviewerAgent
 from src.agents.bacdive_explorer import BacDiveExplorerAgent
 from src.agents.internet_explorer import InternetExplorerAgent
 from src.agents.crossref_explorer import CrossrefExplorerAgent
@@ -68,7 +67,6 @@ class AgentOrchestrator:
             "DATA_ANALYST": os.path.join(self.log_dir, "data_analyst.log"),
             "INTERNET_EXPLORER": os.path.join(self.log_dir, "internet_explorer.log"),
             "CROSSREF_EXPLORER": os.path.join(self.log_dir, "crossref_explorer.log"),
-            "LITERATURE_REVIEWER": os.path.join(self.log_dir, "literature_reviewer.log"),
             "BACDIVE_EXPLORER": os.path.join(self.log_dir, "bacdive_explorer.log"),
             "METADATA_ANALYST": os.path.join(self.log_dir, "metadata_analyst.log"),
             "AGENT_SUMMARIES": os.path.join(self.log_dir, "agent_summaries.log"),
@@ -84,9 +82,6 @@ class AgentOrchestrator:
 
         print("[INIT] CROSSREF_EXPLORER")
         self.crossref_agent = CrossrefExplorerAgent(model_name=model_name, temperature=temperature)
-
-        print("[INIT] LITERATURE_REVIEWER")
-        self.literature_agent = LiteratureReviewerAgent(model_name=model_name, temperature=temperature)
 
         print("[INIT] BACDIVE_EXPLORER")
         self.bacdive_agent = BacDiveExplorerAgent(model_name=model_name, temperature=temperature)
@@ -689,27 +684,33 @@ class AgentOrchestrator:
         use_protocol=True,
         use_internet=True,
         use_crossref=True,
-        use_literature=True
+        use_literature=True,
+
+        # New multi-context parameters
+        datasets=None,
+        metadata_files=None
     ):
-        """Runs the orchestrated multi-agent workflow.
+        """Runs the orchestrated multi-agent workflow sequentially using PydanticAI.
 
         Args:
             query: The user query string.
-            dataframe: Optional pandas DataFrame to analyze.
-            metadata: Optional experimental metadata dict.
-            protocol: Optional experimental protocol dict.
+            dataframe: Optional single pandas DataFrame (backward compatibility).
+            metadata: Optional single experimental metadata dict (backward compatibility).
+            protocol: Optional single experimental protocol dict (backward compatibility).
             microorganism: Optional list of target microorganisms.
             selected_microorganisms: Optional list of selected microorganisms.
             bacdive_microorganisms: Optional list of microorganisms for BacDive query.
             run_bacdive: Whether to execute the BacDive agent. Defaults to False.
             bacdive_result: Optional pre-loaded BacDive results dict.
             bacdive_max_results: Optional limit on the number of BacDive search results.
-            use_all_agents: Whether to execute all src.agents regardless of other flags. Defaults to True.
+            use_all_agents: Whether to execute all agents regardless of other flags. Defaults to True.
             use_dataset: Whether to include the dataset analyst agent. Defaults to True.
             use_protocol: Whether to include the metadata analyst agent. Defaults to True.
             use_internet: Whether to include the internet explorer agent. Defaults to True.
             use_crossref: Whether to include the Crossref explorer agent. Defaults to True.
-            use_literature: Whether to include the literature reviewer agent. Defaults to True.
+            use_literature: Obsolete literature reviewer parameter.
+            datasets: Dict of filename -> DataFrame.
+            metadata_files: Dict of filename -> Metadata JSON dict.
 
         Returns:
             A dict containing outputs and final assessment summary.
@@ -721,38 +722,35 @@ class AgentOrchestrator:
 
         run_started_at = datetime.now().isoformat()
 
+        # Handle backward compatibility wrappers
+        if datasets is None:
+            datasets = {}
+            if dataframe is not None:
+                datasets["default_dataset"] = dataframe
+
+        if metadata_files is None:
+            metadata_files = {}
+            if metadata is not None:
+                metadata_files["default_metadata"] = metadata
+            elif protocol is not None:
+                metadata_files["default_metadata"] = protocol
+
         selected_microorganisms = self.normalize_microorganism_list(selected_microorganisms)
-        bacdive_microorganisms = self.normalize_microorganism_list(bacdive_microorganisms)
-        microorganism_list = self.normalize_microorganism_list(microorganism)
-
-        outputs = {"query": query}
-
-        if microorganism_list:
-            outputs["microorganism"] = microorganism_list
-
-        if selected_microorganisms:
-            outputs["selected_microorganisms"] = selected_microorganisms
-
-        if bacdive_microorganisms:
-            outputs["bacdive_microorganisms"] = bacdive_microorganisms
+        if not selected_microorganisms:
+            selected_microorganisms = self.normalize_microorganism_list(microorganism)
 
         if use_all_agents:
             use_dataset = True
             use_protocol = True
             use_internet = True
             use_crossref = True
-            use_literature = True
             run_bacdive = True
-
-        bacdive_only = self.query_explicitly_bacdive_only(query)
-        bacdive_relevant = self.query_is_bacdive_relevant(query)
 
         filter_state = {
             "use_dataset": use_dataset,
             "use_protocol": use_protocol,
             "use_internet": use_internet,
             "use_crossref": use_crossref,
-            "use_literature": use_literature,
             "run_bacdive": run_bacdive,
             "use_all_agents": use_all_agents
         }
@@ -763,402 +761,153 @@ class AgentOrchestrator:
                 "query": query,
                 "filters": filter_state,
                 "selected_microorganisms": selected_microorganisms,
-                "bacdive_microorganisms": bacdive_microorganisms,
-                "microorganism": microorganism_list,
                 "model": self.model_name,
                 "temperature": self.temperature
             }
         )
 
-        resolved_organisms = self.resolve_bacdive_organisms(
-            query=query,
-            protocol=protocol if use_protocol else None,
-            metadata=metadata if use_protocol else None,
-            dataframe=dataframe if use_dataset else None,
-            microorganism=microorganism_list,
-            selected_microorganisms=selected_microorganisms,
-            bacdive_microorganisms=bacdive_microorganisms
-        )
+        outputs = {"query": query}
 
-        outputs["detected_organisms"] = {
-            "agent_name": "DETECTED_ORGANISMS",
-            "agent_status": "success" if resolved_organisms else "skipped",
-            "organisms": resolved_organisms,
-            "summary": {
-                "organisms": resolved_organisms,
-                "count": len(resolved_organisms)
-            } if resolved_organisms else {},
-            "reason": None if resolved_organisms else "No organisms were resolved.",
-            "agent_summary": (
-                f"Detected organisms: {', '.join(resolved_organisms)}."
-                if resolved_organisms
-                else "No organism could be resolved from the query or inputs."
-            )
-        }
+        # 1. Dataset analysis
+        df_to_analyze = None
+        if datasets and isinstance(datasets, dict) and len(datasets) > 0:
+            df_to_analyze = list(datasets.values())[0]
+        elif dataframe is not None:
+            df_to_analyze = dataframe
 
-        self.log_agent_step(
-            agent_name="DETECTED_ORGANISMS",
-            step="output",
-            input_data={
-                "query": query,
-                "selected_microorganisms": selected_microorganisms,
-                "bacdive_microorganisms": bacdive_microorganisms,
-                "microorganism": microorganism_list
-            },
-            output_data=outputs["detected_organisms"]
-        )
-
-        self.debug_print("FILTER STATE", filter_state)
-        self.debug_print("RESOLVED ORGANISMS", resolved_organisms)
-
-        no_filters_enabled = not any([
-            use_dataset,
-            use_protocol,
-            use_internet,
-            use_crossref,
-            use_literature,
-            run_bacdive
-        ])
-
-        # =================================================
-        # DIRECT LLM MODE
-        # =================================================
-        if no_filters_enabled:
-            direct_input = {
-                "query": query,
-                "query_type": "direct_llm",
-                "mode": "direct_llm_no_filters_enabled",
-                "instruction": (
-                    "Answer the user query directly using the base LLM. "
-                    "No external filters, datasets, protocol metadata, Crossref, "
-                    "Internet/PubMed, Literature Reviewer, or BacDive evidence are enabled."
-                )
-            }
-
-            outputs["data_analyst"] = self.skipped_agent("DATA_ANALYST", "Skipped because Use Dataset is disabled.")
-            outputs["internet_explorer"] = self.skipped_agent("INTERNET_EXPLORER", "Skipped because Use Internet is disabled.")
-            outputs["crossref_explorer"] = self.skipped_agent("CROSSREF_EXPLORER", "Skipped because Use Crossref is disabled.")
-            outputs["literature_reviewer"] = self.skipped_agent("LITERATURE_REVIEWER", "Skipped because Use Literature is disabled.")
-            outputs["bacdive_explorer"] = self.skipped_agent("BACDIVE_EXPLORER", "Skipped because no BacDive organisms were available for analysis.")
-            outputs["metadata_analyst"] = self.skipped_agent("METADATA_ANALYST", "Skipped because Use Protocol is disabled.")
-
-            outputs["agent_summaries"] = {
-                "agent_name": "AGENT_SUMMARIES",
-                "agent_status": "success",
-                "summaries": self.collect_agent_summaries(outputs),
-                "agent_summary": "No filters were enabled. Direct LLM mode was used."
-            }
-
-            self.log_agent_step(
-                agent_name="AGENT_SUMMARIES",
-                step="output",
-                output_data=outputs["agent_summaries"]
-            )
-
-            outputs["master_summary"] = self.safe_run(
-                "MASTER_SUMMARY",
-                self.master_agent.run,
-                direct_input
-            )
-
-            outputs["system_summary"] = {
-                "agents_executed": ["master_summary"],
-                "successful_agents": 1,
-                "failed_agents": 0,
-                "skipped_agents": 6,
-                "model": self.model_name,
-                "temperature": self.temperature,
-                "mode": "direct_llm_no_filters_enabled",
-                "filters": filter_state,
-                "run_started_at": run_started_at,
-                "run_finished_at": datetime.now().isoformat()
-            }
-
-            self.log_system_step("run_completed", outputs["system_summary"])
-            self.debug_print("FINAL SYSTEM OUTPUT", outputs)
-
-            return outputs
-
-        # =================================================
-        # DATA ANALYST
-        # =================================================
-        if use_dataset and dataframe is not None:
+        if use_dataset and df_to_analyze is not None:
             outputs["data_analyst"] = self.safe_run(
                 "DATA_ANALYST",
                 self.data_agent.run,
                 query=query,
-                dataframe=dataframe
+                dataframe=df_to_analyze,
+                use_llm=True
             )
         else:
-            reason = (
-                "Skipped because Use Dataset is disabled."
-                if not use_dataset
-                else "Skipped because no dataframe was provided."
-            )
-            outputs["data_analyst"] = self.skipped_agent("DATA_ANALYST", reason)
+            outputs["data_analyst"] = self.skipped_agent("DATA_ANALYST", "Dataset analysis skipped.")
 
-        # =================================================
-        # INTERNET EXPLORER / PUBMED
-        # =================================================
-        if use_internet and not bacdive_only:
-            outputs["internet_explorer"] = self.safe_run(
-                "INTERNET_EXPLORER",
-                self.internet_agent.run,
-                query=query
-            )
-        else:
-            reason = (
-                "Skipped because the user explicitly requested BacDive only."
-                if bacdive_only
-                else "Skipped because Use Internet is disabled."
-            )
-            outputs["internet_explorer"] = self.skipped_agent("INTERNET_EXPLORER", reason)
+        # 2. Metadata / Protocol analysis
+        meta_to_analyze = None
+        if metadata_files and isinstance(metadata_files, dict) and len(metadata_files) > 0:
+            meta_to_analyze = list(metadata_files.values())[0]
+        elif metadata is not None:
+            meta_to_analyze = metadata
+        elif protocol is not None:
+            meta_to_analyze = protocol
 
-        # =================================================
-        # CROSSREF EXPLORER
-        # =================================================
-        if use_crossref and not bacdive_only:
-            outputs["crossref_explorer"] = self.safe_run(
-                "CROSSREF_EXPLORER",
-                self.crossref_agent.run,
-                query=query
-            )
-        else:
-            reason = (
-                "Skipped because the user explicitly requested BacDive only."
-                if bacdive_only
-                else "Skipped because Use Crossref is disabled."
-            )
-            outputs["crossref_explorer"] = self.skipped_agent("CROSSREF_EXPLORER", reason)
-
-        # =================================================
-        # LITERATURE REVIEWER
-        # =================================================
-        if use_literature and not bacdive_only:
-            outputs["literature_reviewer"] = self.safe_run(
-                "LITERATURE_REVIEWER",
-                self.literature_agent.run,
-                query=query
-            )
-        else:
-            reason = (
-                "Skipped because the user explicitly requested BacDive only."
-                if bacdive_only
-                else "Skipped because Use Literature is disabled."
-            )
-            outputs["literature_reviewer"] = self.skipped_agent("LITERATURE_REVIEWER", reason)
-
-        # =================================================
-        # BACDIVE EXPLORER
-        # =================================================
-        if bacdive_result is not None and run_bacdive:
-            if isinstance(bacdive_result, dict):
-                bacdive_result.setdefault("agent_name", "BACDIVE_EXPLORER")
-                bacdive_result.setdefault("agent_status", "success")
-                bacdive_result.setdefault(
-                    "agent_summary",
-                    self.build_agent_summary("BACDIVE_EXPLORER", bacdive_result)
-                )
-
-            outputs["bacdive_explorer"] = bacdive_result
-
-            self.log_agent_step(
-                agent_name="BACDIVE_EXPLORER",
-                step="external_result_used",
-                input_data={"query": query},
-                output_data=bacdive_result
-            )
-
-        elif run_bacdive:
-            if resolved_organisms:
-                bacdive_outputs = {}
-
-                for organism in resolved_organisms:
-                    bacdive_outputs[organism] = self.safe_run(
-                        "BACDIVE_EXPLORER",
-                        self.bacdive_agent.run,
-                        query=query,
-                        microorganism=organism,
-                        use_llm=False,
-                        max_results=bacdive_max_results
-                    )
-
-                organism_summaries = []
-
-                for organism, result in bacdive_outputs.items():
-                    if isinstance(result, dict):
-                        organism_summaries.append(
-                            f"{organism}: {result.get('agent_summary', 'No summary available.')}"
-                        )
-
-                outputs["bacdive_explorer"] = {
-                    "agent_name": "BACDIVE_EXPLORER",
-                    "agent_status": "success",
-                    "organisms": resolved_organisms,
-                    "results": bacdive_outputs,
-                    "agent_summary": "\n\n".join(organism_summaries)
-                }
-
-                self.log_agent_step(
-                    agent_name="BACDIVE_EXPLORER",
-                    step="combined_output",
-                    input_data={
-                        "query": query,
-                        "resolved_organisms": resolved_organisms
-                    },
-                    output_data=outputs["bacdive_explorer"]
-                )
-
-            else:
-                outputs["bacdive_explorer"] = self.skipped_agent(
-                    "BACDIVE_EXPLORER",
-                    "Use BacDive is enabled, but no valid organism could be resolved."
-                )
-
-        else:
-            outputs["bacdive_explorer"] = self.skipped_agent(
-                "BACDIVE_EXPLORER",
-                "Skipped because no BacDive organisms were available for analysis."
-            )
-
-        # =================================================
-        # METADATA ANALYST
-        # =================================================
-        if use_protocol and (metadata is not None or protocol is not None):
+        if use_protocol and (meta_to_analyze is not None or protocol is not None):
             outputs["metadata_analyst"] = self.safe_run(
                 "METADATA_ANALYST",
                 self.metadata_agent.run,
-                metadata=metadata,
-                protocol=protocol
+                metadata=meta_to_analyze,
+                protocol=protocol,
+                use_llm=True
             )
         else:
-            reason = (
-                "Skipped because Use Protocol is disabled."
-                if not use_protocol
-                else "Skipped because no metadata or protocol was provided."
-            )
-            outputs["metadata_analyst"] = self.skipped_agent("METADATA_ANALYST", reason)
+            outputs["metadata_analyst"] = self.skipped_agent("METADATA_ANALYST", "Metadata analysis skipped.")
 
-        # =================================================
-        # AGENT SUMMARIES
-        # =================================================
+        # 3. Organism detection and BacDive search
+        resolved_organisms = []
+        if run_bacdive or use_all_agents:
+            resolved_organisms = self.resolve_bacdive_organisms(
+                query=query,
+                protocol=meta_to_analyze,
+                metadata=meta_to_analyze,
+                dataframe=df_to_analyze,
+                microorganism=microorganism,
+                selected_microorganisms=selected_microorganisms,
+                bacdive_microorganisms=bacdive_microorganisms
+            )
+        
+        outputs["detected_organisms"] = {
+            "agent_name": "DETECTED_ORGANISMS",
+            "agent_status": "success" if resolved_organisms else "skipped",
+            "organisms": resolved_organisms
+        }
+
+        if run_bacdive and resolved_organisms:
+            bacdive_results = {}
+            for org in resolved_organisms:
+                result = self.safe_run(
+                    "BACDIVE_EXPLORER",
+                    self.bacdive_agent.run,
+                    query=query,
+                    microorganism=org,
+                    use_llm=False,
+                    max_results=bacdive_max_results
+                )
+                bacdive_results[org] = result
+            
+            outputs["bacdive_explorer"] = {
+                "agent_name": "BACDIVE_EXPLORER",
+                "agent_status": "success",
+                "results": bacdive_results,
+                "agent_summary": f"Executed BacDive search for {', '.join(resolved_organisms)}."
+            }
+        else:
+            outputs["bacdive_explorer"] = self.skipped_agent("BACDIVE_EXPLORER", "BacDive query skipped.")
+
+        # 4. Crossref Explorer
+        if use_crossref:
+            outputs["crossref_explorer"] = self.safe_run(
+                "CROSSREF_EXPLORER",
+                self.crossref_agent.run,
+                query=query,
+                use_llm=True
+            )
+        else:
+            outputs["crossref_explorer"] = self.skipped_agent("CROSSREF_EXPLORER", "Crossref search skipped.")
+
+        # 5. Internet Explorer
+        if use_internet:
+            outputs["internet_explorer"] = self.safe_run(
+                "INTERNET_EXPLORER",
+                self.internet_agent.run,
+                query=query,
+                use_llm=True
+            )
+        else:
+            outputs["internet_explorer"] = self.skipped_agent("INTERNET_EXPLORER", "Internet search skipped.")
+
+        # Build combined agent summaries
         outputs["agent_summaries"] = {
             "agent_name": "AGENT_SUMMARIES",
             "agent_status": "success",
             "summaries": self.collect_agent_summaries(outputs),
-            "agent_summary": "Collected summaries only from enabled/routed src.agents."
+            "agent_summary": "Collected summaries from sequential execution."
         }
 
-        self.log_agent_step(
-            agent_name="AGENT_SUMMARIES",
-            step="output",
-            input_data={
-                "available_agents": list(outputs.keys())
-            },
-            output_data=outputs["agent_summaries"]
-        )
-
-        # =================================================
-        # MASTER INPUT
-        # =================================================
-        master_input = {
-            "query": query,
-            "query_type": "bacdive_only" if bacdive_only else "filtered_multi_agent",
-            "bacdive_relevant": bacdive_relevant,
-            "bacdive_only": bacdive_only,
-
-            "filter_policy": (
-                "Only use evidence from src.agents whose corresponding UI filter/toggle "
-                "was enabled and whose agent_status is success. Do not use skipped src.agents. "
-                "If an agent is skipped because its filter is disabled, ignore it completely."
-            ),
-
-            "enabled_filters": {
-                "use_dataset": use_dataset,
-                "use_protocol": use_protocol,
-                "use_internet": use_internet,
-                "use_crossref": use_crossref,
-                "use_literature": use_literature,
-                "run_bacdive": run_bacdive
-            },
-
-            "evidence_policy": (
-                "Do not invent biology, citations, BacDive traits, growth optima, "
-                "oxygen limitation conclusions, industrial recommendations, or scale-up claims. "
-                "If evidence is missing, say that it is insufficient or unavailable."
-            ),
-
-            "detected_organisms": outputs.get("detected_organisms", {}),
-            "selected_microorganisms": selected_microorganisms,
-            "bacdive_microorganisms": bacdive_microorganisms,
-
-            "agent_summaries": outputs.get("agent_summaries", {}),
-
-            "data_analyst": outputs.get("data_analyst", {}),
-            "internet_explorer": outputs.get("internet_explorer", {}),
-            "crossref_explorer": outputs.get("crossref_explorer", {}),
-            "literature_reviewer": outputs.get("literature_reviewer", {}),
-            "bacdive_explorer": outputs.get("bacdive_explorer", {}),
-            "metadata_analyst": outputs.get("metadata_analyst", {})
-        }
-
-        self.debug_print("MASTER SUMMARIZER INPUT", master_input)
-
-        self.log_agent_step(
-            agent_name="MASTER_SUMMARY",
-            step="master_input_prepared",
-            input_data=master_input,
-            output_data=None
-        )
-
-        outputs["master_summary"] = self.safe_run(
-            "MASTER_SUMMARY",
+        # 6. Master Summarizer
+        master_result = self.safe_run(
+            "MASTER_SUMMARIZER",
             self.master_agent.run,
-            master_input
+            agent_outputs=outputs
         )
+        outputs["master_summarizer"] = master_result
+        outputs["assessment"] = master_result.get("final_summary", "")
 
-        # =================================================
-        # SYSTEM SUMMARY
-        # =================================================
+        # Build final system summary
         successful_agents = len([
             v for v in outputs.values()
             if isinstance(v, dict) and v.get("agent_status") == "success"
         ])
-
         failed_agents = len([
             v for v in outputs.values()
             if isinstance(v, dict) and v.get("agent_status") == "failed"
         ])
-
         skipped_agents = len([
             v for v in outputs.values()
             if isinstance(v, dict) and v.get("agent_status") == "skipped"
         ])
 
-        agents_executed = []
-
-        for key, value in outputs.items():
-            if isinstance(value, dict) and value.get("agent_status") != "skipped":
-                agents_executed.append(key)
-
         outputs["system_summary"] = {
-            "agents_executed": agents_executed,
+            "agents_executed": [k for k, v in outputs.items() if isinstance(v, dict) and v.get("agent_status") != "skipped"],
             "successful_agents": successful_agents,
             "failed_agents": failed_agents,
             "skipped_agents": skipped_agents,
             "model": self.model_name,
             "temperature": self.temperature,
-            "bacdive_relevant": bacdive_relevant,
-            "bacdive_only": bacdive_only,
-            "mode": "filtered_multi_agent",
-            "filters": {
-                "use_dataset": use_dataset,
-                "use_protocol": use_protocol,
-                "use_internet": use_internet,
-                "use_crossref": use_crossref,
-                "use_literature": use_literature,
-                "run_bacdive": run_bacdive
-            },
+            "mode": "sequential_multi_agent",
             "run_started_at": run_started_at,
             "run_finished_at": datetime.now().isoformat(),
             "log_directory": self.log_dir
@@ -1166,15 +915,8 @@ class AgentOrchestrator:
 
         self.log_system_step("run_completed", outputs["system_summary"])
 
-        self.debug_print("FINAL SYSTEM OUTPUT", outputs)
-
         print("\n" + "=" * 100)
         print("[AGENT ORCHESTRATOR] RUN COMPLETED")
         print("=" * 100)
-        print(f"SUCCESSFUL AGENTS: {successful_agents}")
-        print(f"FAILED AGENTS: {failed_agents}")
-        print(f"SKIPPED AGENTS: {skipped_agents}")
-        print(f"LOG DIRECTORY: {self.log_dir}")
-        print("=" * 100 + "\n")
 
         return outputs

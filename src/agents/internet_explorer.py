@@ -13,7 +13,9 @@ import warnings
 import requests
 from ddgs import DDGS
 from Bio import Entrez
-from langchain_ollama import OllamaLLM
+import os
+from pydantic_ai import Agent, ModelSettings
+from pydantic_ai.models.ollama import OllamaModel
 
 
 warnings.filterwarnings(
@@ -88,9 +90,13 @@ class InternetExplorerAgent:
         if self.api_key:
             Entrez.api_key = self.api_key
 
-        self.llm = OllamaLLM(
-            model=model_name,
-            temperature=temperature
+        from pydantic_ai.providers.ollama import OllamaProvider
+        base_url = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434/v1")
+        provider = OllamaProvider(base_url=base_url)
+        model = OllamaModel(model_name=model_name, provider=provider)
+        self.agent = Agent(
+            model=model,
+            model_settings=ModelSettings(temperature=temperature)
         )
 
         self.session = requests.Session()
@@ -1150,7 +1156,8 @@ Do NOT contradict deterministic counts.
             print(f"[INTERNET EXPLORER PROMPT SIZE] {len(prompt)} characters")
 
             try:
-                llm_assessment = self.llm.invoke(prompt)
+                result = self.agent.run_sync(prompt)
+                llm_assessment = result.data
                 llm_assessment = self.sanitize_llm_assessment(
                     llm_assessment,
                     valid_ddgs_count=len(valid_ddgs),

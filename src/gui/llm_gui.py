@@ -15,12 +15,13 @@ import os
 import re
 import html
 import time
+import traceback
+from datetime import datetime
 
 import src.utils.theme as theme
 from src.utils.logging_config import get_logger
 from src.utils.paths import ensure_dirs
 from src.agents.agent_orchestrator import AgentOrchestrator
-from langchain_ollama import OllamaLLM
 from src.agents.bacdive_explorer import BacDiveExplorerAgent
 from src.agents.microorganism_router import MicroorganismRouter
 
@@ -119,6 +120,9 @@ class LlmGui:
 
         self.protocol_data = {}
 
+        self.selected_datasets = []
+        self.selected_metadata_list = []
+
         self.mem_file = ""
 
         self.mem_protocol = ""
@@ -190,15 +194,7 @@ class LlmGui:
         # =============================================
         self.load_memory()
 
-        # =============================================
-        # OLLAMA ROUTER LLM
-        # =============================================
-        self.router_llm = OllamaLLM(
 
-            model=self.mem_model,
-
-            temperature=0.0
-        )
 
         # =============================================
         # MAIN ORCHESTRATOR
@@ -296,103 +292,560 @@ class LlmGui:
     # =====================================================
     def save_memory(self):
         """Saves current GUI selection state to session storage cache."""
+        datasets_mem = []
+        for ds in getattr(self, "selected_datasets", []):
+            fname = ds.get("file_select").value if ds.get("file_select") else ds.get("filename")
+            if fname:
+                filter_list = []
+                for tier in ds.get("filter_tiers", []):
+                    col = tier.get("col_select").value
+                    vals = tier.get("val_select").value
+                    if col:
+                        filter_list.append({"column": col, "values": vals})
+                datasets_mem.append({"filename": fname, "filters": filter_list})
+
+        metadata_mem = []
+        for md in getattr(self, "selected_metadata_list", []):
+            fname = md.get("file_select").value if md.get("file_select") else md.get("filename")
+            if fname:
+                metadata_mem.append({
+                    "filename": fname,
+                    "investigation": md.get("investigation_select").value,
+                    "study": md.get("study_select").value,
+                    "unit": md.get("unit_select").value,
+                    "sample": md.get("sample_select").value,
+                    "assay": md.get("assay_select").value
+                })
 
         self.storage["llm_memory"] = {
-
-            "selected_file":
-                self.file_select.value
-                if hasattr(
-                    self,
-                    "file_select"
-                )
-                else "",
-
-            "selected_protocol":
-                self.protocol_select.value
-                if hasattr(
-                    self,
-                    "protocol_select"
-                )
-                else "",
-
-            "model":
+            "selected_datasets_multi": datasets_mem,
+            "selected_metadata_multi": metadata_mem,
+            "model": (
                 self.model_select.value
-                if hasattr(
-                    self,
-                    "model_select"
-                )
-                else self.mem_model,
-
-            "temperature":
+                if hasattr(self, "model_select")
+                else self.mem_model
+            ),
+            "temperature": (
                 self.temperature.value
-                if hasattr(
-                    self,
-                    "temperature"
-                )
-                else self.mem_temp,
-
-            "selected_microorganisms":
-                self.selected_microorganisms
+                if hasattr(self, "temperature")
+                else self.mem_temp
+            ),
+            "selected_microorganisms": getattr(self, "selected_microorganisms", []),
+            "use_dataset": self.use_dataset.value if hasattr(self, "use_dataset") else True,
+            "use_protocol": self.use_protocol.value if hasattr(self, "use_protocol") else True,
+            "use_crossref": self.use_crossref.value if hasattr(self, "use_crossref") else True,
+            "use_bacdive": self.use_bacdive.value if hasattr(self, "use_bacdive") else True,
+            "use_internet": self.use_internet.value if hasattr(self, "use_internet") else True,
         }
 
-        self.storage[
-            "selected_microorganisms"
-        ] = self.selected_microorganisms
+        self.storage["selected_microorganisms"] = getattr(self, "selected_microorganisms", [])
 
     def load_memory(self):
         """Loads previous GUI selection states from session storage cache."""
-
-        mem = self.storage.get(
-            "llm_memory",
-            {}
-        )
-
-        self.mem_file = mem.get(
-            "selected_file",
-            ""
-        )
-
-        self.mem_protocol = mem.get(
-            "selected_protocol",
-            ""
-        )
-
-        self.mem_model = mem.get(
-            "model",
-            "llama3:latest"
-        )
-
-        self.mem_temp = mem.get(
-            "temperature",
-            0.2
-        )
+        mem = self.storage.get("llm_memory", {})
+        self.mem_model = mem.get("model", "llama3:latest")
+        self.mem_temp = mem.get("temperature", 0.2)
 
         saved_microorganisms = mem.get(
             "selected_microorganisms",
-            self.storage.get(
-                "selected_microorganisms",
-                []
-            )
+            self.storage.get("selected_microorganisms", [])
         )
 
         if saved_microorganisms is None:
-
             saved_microorganisms = []
 
-        if isinstance(
-            saved_microorganisms,
-            str
-        ):
-
-            saved_microorganisms = [
-                saved_microorganisms
-            ]
+        if isinstance(saved_microorganisms, str):
+            saved_microorganisms = [saved_microorganisms]
 
         self.selected_microorganisms = [
             m
             for m in saved_microorganisms
             if m in self.available_microorganisms
         ]
+
+    def filter_metadata_hierarchy(self, data, inv, study, unit, sample, assay):
+        if not data or not isinstance(data, dict):
+            return {}
+        
+        filtered = {
+            "File name": data.get("File name", ""),
+            "Updated": data.get("Updated", ""),
+            "Investigations": {}
+        }
+        
+        invs = data.get("Investigations", {})
+        if not inv:
+            return data
+        
+        inv_data = invs.get(inv)
+        if not inv_data:
+            return filtered
+            
+        inv_copy = {k: v for k, v in inv_data.items() if k != "Studies"}
+        inv_copy["Studies"] = {}
+        filtered["Investigations"][inv] = inv_copy
+        
+        studies = inv_data.get("Studies", {})
+        if not study:
+            inv_copy["Studies"] = studies
+            return filtered
+            
+        study_data = studies.get(study)
+        if not study_data:
+            return filtered
+            
+        study_copy = {k: v for k, v in study_data.items() if k != "observationUnits"}
+        study_copy["observationUnits"] = {}
+        inv_copy["Studies"][study] = study_copy
+        
+        units = study_data.get("observationUnits", {})
+        if not unit:
+            study_copy["observationUnits"] = units
+            return filtered
+            
+        unit_data = units.get(unit)
+        if not unit_data:
+            return filtered
+            
+        unit_copy = {k: v for k, v in unit_data.items() if k != "Samples"}
+        unit_copy["Samples"] = {}
+        study_copy["observationUnits"][unit] = unit_copy
+        
+        samples = unit_data.get("Samples", {})
+        if not sample:
+            unit_copy["Samples"] = samples
+            return filtered
+            
+        sample_data = samples.get(sample)
+        if not sample_data:
+            return filtered
+            
+        sample_copy = {k: v for k, v in sample_data.items() if k != "Assays"}
+        sample_copy["Assays"] = {}
+        unit_copy["Samples"][sample] = sample_copy
+        
+        assays = sample_data.get("Assays", {})
+        if not assay:
+            sample_copy["Assays"] = assays
+            return filtered
+            
+        assay_data = assays.get(assay)
+        if assay_data:
+            sample_copy["Assays"][assay] = assay_data
+            
+        return filtered
+
+    def add_dataset_row(self, initial_val=None, initial_filters=None):
+        if not hasattr(self, "datasets_container") or not self.datasets_container:
+            return
+
+        with self.datasets_container:
+            row_el = ui.card().classes("w-full p-4 border border-slate-200 rounded-lg bg-slate-50 relative gap-3")
+            with row_el:
+                with ui.row().classes("w-full justify-between items-center"):
+                    ui.label("Dataset Configuration").classes("text-sm font-bold text-slate-700")
+                    ui.button(
+                        icon="delete",
+                        on_click=lambda: remove_dataset()
+                    ).props("flat round dense color=negative").tooltip("Remove dataset")
+                    
+                file_select = ui.select(
+                    self.get_available_files(),
+                    label="Dataset File",
+                    with_input=True
+                ).classes("w-full")
+                
+                with ui.row().classes("items-center gap-2 mt-1"):
+                    add_tier_btn = ui.button(
+                        icon="add",
+                    ).props("round color=primary dense").tooltip("Add filtering tier")
+                    ui.label("Add a Filtering Tier").classes("text-xs font-bold text-slate-500 uppercase tracking-wider")
+                    
+                filter_container = ui.column().classes("w-full gap-2 mt-1")
+                
+            item = {
+                "row_element": row_el,
+                "file_select": file_select,
+                "filter_tiers": [],
+                "df": None,
+                "filename": ""
+            }
+            self.selected_datasets.append(item)
+            
+            def remove_dataset():
+                if item in self.selected_datasets:
+                    self.selected_datasets.remove(item)
+                row_el.delete()
+                self.save_memory()
+                self.refresh_info()
+                
+            def on_file_change(e):
+                val = file_select.value
+                item["filename"] = val or ""
+                if val:
+                    cached = self.get_cache().get(val)
+                    if cached:
+                        item["df"] = pd.DataFrame(cached)
+                    else:
+                        item["df"] = None
+                else:
+                    item["df"] = None
+                    
+                item["filter_tiers"].clear()
+                filter_container.clear()
+                self.save_memory()
+                self.refresh_info()
+                
+            file_select.on_value_change(on_file_change)
+            
+            def add_tier_click():
+                self.add_filter_tier_to_item(item, filter_container)
+                
+            add_tier_btn.on_click(add_tier_click)
+            
+            if initial_val:
+                file_select.value = initial_val
+                cached = self.get_cache().get(initial_val)
+                if cached:
+                    item["df"] = pd.DataFrame(cached)
+                if initial_filters:
+                    for f in initial_filters:
+                        self.add_filter_tier_to_item(item, filter_container, f.get("column"), f.get("values"))
+
+    def add_filter_tier_to_item(self, item, container, initial_col=None, initial_vals=None):
+        df = item["df"]
+        cols = list(df.columns) if df is not None else []
+        tier_idx = len(item["filter_tiers"]) + 1
+        
+        with container:
+            with ui.column().classes("w-full gap-1 border-t border-slate-100 pt-2") as tier_col:
+                with ui.row().classes("w-full justify-between items-center"):
+                    label_el = ui.label(f"Tier {tier_idx} Filtering").classes("text-xs font-bold text-slate-500 uppercase tracking-wider")
+                    
+                    def remove_this(t_col=tier_col, idx=tier_idx):
+                        for t in list(item["filter_tiers"]):
+                            if t["index"] == idx:
+                                item["filter_tiers"].remove(t)
+                                break
+                        for i, t in enumerate(item["filter_tiers"]):
+                            new_idx = i + 1
+                            t["index"] = new_idx
+                            t["label"].text = f"Tier {new_idx} Filtering"
+                        t_col.delete()
+                        self.save_memory()
+                        
+                    ui.button(
+                        icon="delete",
+                        on_click=remove_this
+                    ).props("flat round dense color=negative").tooltip("Remove this tier")
+                    
+                with ui.row().classes("w-full gap-4 items-center"):
+                    col_select = ui.select(
+                        cols,
+                        label="Select Column",
+                        with_input=True
+                    ).classes("flex-1")
+                    
+                    val_select = ui.select(
+                        [],
+                        label="Select Value",
+                        multiple=True,
+                        with_input=True
+                    ).props("use-chips").classes("flex-1")
+                    
+            tier_data = {
+                "index": tier_idx,
+                "label": label_el,
+                "col_select": col_select,
+                "val_select": val_select,
+                "container": tier_col
+            }
+            item["filter_tiers"].append(tier_data)
+            
+            def update_vals():
+                col = col_select.value
+                if item["df"] is not None and col and col in item["df"].columns:
+                    sorted_vals = sorted(
+                        item["df"][col]
+                        .dropna()
+                        .astype(str)
+                        .str.strip()
+                        .unique()
+                        .tolist()
+                    )
+                    val_select.options = sorted_vals
+                else:
+                    val_select.options = []
+                val_select.value = []
+                val_select.update()
+                self.save_memory()
+                
+            col_select.on_value_change(lambda e: update_vals())
+            val_select.on_value_change(lambda e: self.save_memory())
+            
+            if initial_col:
+                col_select.value = initial_col
+                # update val options before setting initial_vals
+                if df is not None and initial_col in df.columns:
+                    val_select.options = sorted(
+                        df[initial_col]
+                        .dropna()
+                        .astype(str)
+                        .str.strip()
+                        .unique()
+                        .tolist()
+                    )
+                if initial_vals:
+                    val_select.value = initial_vals
+
+    def add_metadata_row(self, initial_val=None, initial_inv=None, initial_study=None, initial_unit=None, initial_sample=None, initial_assay=None):
+        if not hasattr(self, "metadata_container") or not self.metadata_container:
+            return
+
+        with self.metadata_container:
+            row_el = ui.card().classes("w-full p-4 border border-slate-200 rounded-lg bg-slate-50 relative gap-3")
+            with row_el:
+                with ui.row().classes("w-full justify-between items-center"):
+                    ui.label("Metadata Configuration").classes("text-sm font-bold text-slate-700")
+                    ui.button(
+                        icon="delete",
+                        color="negative",
+                        on_click=lambda: remove_metadata()
+                    ).props("flat round dense").tooltip("Remove metadata")
+                    
+                file_select = ui.select(
+                    self.saved_protocol_names(),
+                    label="Metadata File",
+                    with_input=True
+                ).classes("w-full")
+                
+                # Optimized layout row below file selector
+                with ui.row().classes("w-full gap-2 mt-2 flex-wrap items-center"):
+                    investigation_select = ui.select([], label="Investigation").classes("flex-1 min-w-[120px]")
+                    study_select = ui.select([], label="Study").classes("flex-1 min-w-[120px]")
+                    unit_select = ui.select([], label="Observation Unit").classes("flex-1 min-w-[120px]")
+                    sample_select = ui.select([], label="Sample").classes("flex-1 min-w-[120px]")
+                    assay_select = ui.select([], label="Assay").classes("flex-1 min-w-[120px]")
+                    
+            item = {
+                "row_element": row_el,
+                "file_select": file_select,
+                "investigation_select": investigation_select,
+                "study_select": study_select,
+                "unit_select": unit_select,
+                "sample_select": sample_select,
+                "assay_select": assay_select,
+                "metadata_data": None,
+                "filename": ""
+            }
+            self.selected_metadata_list.append(item)
+            
+            def remove_metadata():
+                if item in self.selected_metadata_list:
+                    self.selected_metadata_list.remove(item)
+                row_el.delete()
+                self.save_memory()
+                self.refresh_info()
+                
+            def on_file_change(e):
+                val = file_select.value
+                item["filename"] = val or ""
+                if val:
+                    cache = self.storage.get("loaded_json_cache", {})
+                    cache_key = val
+                    if cache_key not in cache and cache_key + ".json" in cache:
+                        cache_key = cache_key + ".json"
+                    elif cache_key not in cache and cache_key.endswith(".json") and cache_key[:-5] in cache:
+                        cache_key = cache_key[:-5]
+                        
+                    if cache_key in cache:
+                        item["metadata_data"] = cache[cache_key]
+                    else:
+                        path_proto = os.path.join(self.protocol_dir, val + ".json")
+                        path_exp = os.path.join(str(ensure_dirs()["exports"]), val + ".json")
+                        loaded = False
+                        for path in [path_proto, path_exp]:
+                            if os.path.exists(path):
+                                try:
+                                    with open(path, "r", encoding="utf-8") as fp:
+                                        item["metadata_data"] = json.load(fp)
+                                        loaded = True
+                                        break
+                                except Exception:
+                                    pass
+                        if not loaded:
+                            item["metadata_data"] = None
+                else:
+                    item["metadata_data"] = None
+                    
+                investigation_select.value = None
+                investigation_select.options = []
+                study_select.value = None
+                study_select.options = []
+                unit_select.value = None
+                unit_select.options = []
+                sample_select.value = None
+                sample_select.options = []
+                assay_select.value = None
+                assay_select.options = []
+                
+                if item["metadata_data"]:
+                    invs = item["metadata_data"].get("Investigations", {})
+                    investigation_select.options = list(invs.keys())
+                    
+                investigation_select.update()
+                study_select.update()
+                unit_select.update()
+                sample_select.update()
+                assay_select.update()
+                self.save_memory()
+                self.refresh_info()
+                
+            file_select.on_value_change(on_file_change)
+            
+            def on_investigation_change(e):
+                inv = investigation_select.value
+                study_select.value = None
+                study_select.options = []
+                unit_select.value = None
+                unit_select.options = []
+                sample_select.value = None
+                sample_select.options = []
+                assay_select.value = None
+                assay_select.options = []
+                
+                if item["metadata_data"] and inv:
+                    invs = item["metadata_data"].get("Investigations", {})
+                    studies = invs.get(inv, {}).get("Studies", {})
+                    study_select.options = list(studies.keys())
+                    
+                study_select.update()
+                unit_select.update()
+                sample_select.update()
+                assay_select.update()
+                self.save_memory()
+                
+            investigation_select.on_value_change(on_investigation_change)
+            
+            def on_study_change(e):
+                inv = investigation_select.value
+                study = study_select.value
+                unit_select.value = None
+                unit_select.options = []
+                sample_select.value = None
+                sample_select.options = []
+                assay_select.value = None
+                assay_select.options = []
+                
+                if item["metadata_data"] and inv and study:
+                    invs = item["metadata_data"].get("Investigations", {})
+                    studies = invs.get(inv, {}).get("Studies", {})
+                    units = studies.get(study, {}).get("observationUnits", {})
+                    unit_select.options = list(units.keys())
+                    
+                unit_select.update()
+                sample_select.update()
+                assay_select.update()
+                self.save_memory()
+                
+            study_select.on_value_change(on_study_change)
+            
+            def on_unit_change(e):
+                inv = investigation_select.value
+                study = study_select.value
+                unit = unit_select.value
+                sample_select.value = None
+                sample_select.options = []
+                assay_select.value = None
+                assay_select.options = []
+                
+                if item["metadata_data"] and inv and study and unit:
+                    invs = item["metadata_data"].get("Investigations", {})
+                    studies = invs.get(inv, {}).get("Studies", {})
+                    units = studies.get(study, {}).get("observationUnits", {})
+                    samples = units.get(unit, {}).get("Samples", {})
+                    sample_select.options = list(samples.keys())
+                    
+                sample_select.update()
+                assay_select.update()
+                self.save_memory()
+                
+            unit_select.on_value_change(on_unit_change)
+            
+            def on_sample_change(e):
+                inv = investigation_select.value
+                study = study_select.value
+                unit = unit_select.value
+                sample = sample_select.value
+                assay_select.value = None
+                assay_select.options = []
+                
+                if item["metadata_data"] and inv and study and unit and sample:
+                    invs = item["metadata_data"].get("Investigations", {})
+                    studies = invs.get(inv, {}).get("Studies", {})
+                    units = studies.get(study, {}).get("observationUnits", {})
+                    samples = units.get(unit, {}).get("Samples", {})
+                    assays = samples.get(sample, {}).get("Assays", {})
+                    assay_select.options = list(assays.keys())
+                    
+                assay_select.update()
+                self.save_memory()
+                
+            sample_select.on_value_change(on_sample_change)
+            assay_select.on_value_change(lambda e: self.save_memory())
+            
+            if initial_val:
+                file_select.value = initial_val
+                cache = self.storage.get("loaded_json_cache", {})
+                cache_key = initial_val
+                if cache_key not in cache and cache_key + ".json" in cache:
+                    cache_key = cache_key + ".json"
+                elif cache_key not in cache and cache_key.endswith(".json") and cache_key[:-5] in cache:
+                    cache_key = cache_key[:-5]
+                    
+                if cache_key in cache:
+                    item["metadata_data"] = cache[cache_key]
+                else:
+                    path_proto = os.path.join(self.protocol_dir, initial_val + ".json")
+                    path_exp = os.path.join(str(ensure_dirs()["exports"]), initial_val + ".json")
+                    loaded = False
+                    for path in [path_proto, path_exp]:
+                        if os.path.exists(path):
+                            try:
+                                with open(path, "r", encoding="utf-8") as fp:
+                                    item["metadata_data"] = json.load(fp)
+                                    loaded = True
+                                    break
+                            except Exception:
+                                pass
+                    if not loaded:
+                        item["metadata_data"] = None
+                if item["metadata_data"]:
+                    invs = item["metadata_data"].get("Investigations", {})
+                    investigation_select.options = list(invs.keys())
+                    investigation_select.update()
+                    if initial_inv:
+                        investigation_select.value = initial_inv
+                        studies = invs.get(initial_inv, {}).get("Studies", {})
+                        study_select.options = list(studies.keys())
+                        study_select.update()
+                        if initial_study:
+                            study_select.value = initial_study
+                            units = studies.get(initial_study, {}).get("observationUnits", {})
+                            unit_select.options = list(units.keys())
+                            unit_select.update()
+                            if initial_unit:
+                                unit_select.value = initial_unit
+                                samples = units.get(initial_unit, {}).get("Samples", {})
+                                sample_select.options = list(samples.keys())
+                                sample_select.update()
+                                if initial_sample:
+                                    sample_select.value = initial_sample
+                                    assays = samples.get(initial_sample, {}).get("Assays", {})
+                                    assay_select.options = list(assays.keys())
+                                    assay_select.update()
+                                    if initial_assay:
+                                        assay_select.value = initial_assay
 
     # =====================================================
     # DATASETS
@@ -448,39 +901,20 @@ class LlmGui:
         )
 
     def refresh_loaded_files(self):
-
-        if not hasattr(
-            self,
-            "file_select"
-        ):
-
-            return
-
         files = self.get_available_files()
-
-        self.file_select.options = files
-
-        last = self.storage.get(
-            "last_loaded_file"
-        )
-
-        if self.mem_file in files:
-
-            self.file_select.value = self.mem_file
-
-        elif last in files:
-
-            self.file_select.value = last
-
-        elif files:
-
-            self.file_select.value = files[0]
-
-        else:
-
-            self.file_select.value = None
-
-        self.file_select.update()
+        protocols = self.saved_protocol_names()
+        
+        for ds in getattr(self, "selected_datasets", []):
+            select_el = ds.get("file_select")
+            if select_el:
+                select_el.options = files
+                select_el.update()
+                
+        for md in getattr(self, "selected_metadata_list", []):
+            select_el = md.get("file_select")
+            if select_el:
+                select_el.options = protocols
+                select_el.update()
 
     def use_selected_file(self):
 
@@ -549,24 +983,26 @@ class LlmGui:
     # PROTOCOLS
     # =====================================================
     def saved_protocol_names(self):
-
         arr = []
-
-        for f in os.listdir(
-            self.protocol_dir
-        ):
-
-            if f.endswith(
-                ".json"
-            ):
-
-                arr.append(
-                    f[:-5]
-                )
-
-        return sorted(
-            arr
-        )
+        # 1. From session storage cache
+        cache = self.storage.get("loaded_json_cache", {})
+        for k in cache.keys():
+            if k.endswith(".json"):
+                arr.append(k[:-5])
+            else:
+                arr.append(k)
+        # 2. From protocol_dir
+        if os.path.isdir(self.protocol_dir):
+            for f in os.listdir(self.protocol_dir):
+                if f.endswith(".json"):
+                    arr.append(f[:-5])
+        # 3. From exports_dir
+        exports_dir = str(ensure_dirs()["exports"])
+        if os.path.isdir(exports_dir):
+            for f in os.listdir(exports_dir):
+                if f.endswith(".json"):
+                    arr.append(f[:-5])
+        return sorted(list(set(arr)))
 
     def refresh_protocols(self):
 
@@ -1438,305 +1874,160 @@ If BacDive evidence is missing, say that clearly.
     def content_(self):
         """Renders the HTML/CSS contents of the LLM Dataset page."""
 
-        with ui.row().classes(
-            "w-full no-wrap"
-        ):
+        with ui.column().classes("w-full gap-4"):
 
-            # =================================================
-            # LEFT SIDEBAR
-            # =================================================
-            with ui.column().classes(
-                "w-[390px] p-4 gap-3 bg-slate-100"
-            ):
+            # ============================================
+            # SETTINGS CARD (STYLE & LAYOUT MATCHING OTHER PAGES)
+            # ============================================
+            with ui.card().classes("w-full rounded-xl shadow-md p-6 gap-4"):
 
-                ui.label(
-                    "Industrial AI Copilot"
-                ).classes(
-                    "text-h5 font-bold"
-                )
+                with ui.row().classes("w-full justify-between items-start"):
+                    with ui.column().classes("gap-1"):
+                        ui.label(
+                            "Agentic AI-Assisted Bioprocess Exploration"
+                        ).classes("text-h6 font-bold")
 
-                ui.label(
-                    "Multi-Agent Fermentation Intelligence System"
-                ).classes(
-                    "text-slate-500 text-sm"
-                )
-
-                ui.separator()
-
-                # =============================================
-                # DATASETS
-                # =============================================
-                ui.label(
-                    "Datasets"
-                ).classes(
-                    "font-bold"
-                )
-
-                with ui.row().classes(
-                    "w-full items-center gap-2"
-                ):
-
-                    self.file_select = ui.select(
-                        [],
-                        label="Loaded Files"
+                        ui.label(
+                            "Explore Data, Experimental Conditions, Microbial Information, Literature and More"
+                        ).classes(
+                            "text-slate-500 text-sm"
+                        )
+                    
+                    self.info_label = ui.label(
+                        "No context loaded"
                     ).classes(
-                        "flex-1"
+                        "text-sm text-slate-700 bg-slate-100 p-2 rounded"
                     )
 
-                    ui.button(
-                        "REFRESH",
-                        icon="refresh",
-                        on_click=self.refresh_loaded_files
-                    )
+                ui.separator()
 
-                ui.button(
-                    "LOAD DATASET",
-                    icon="dataset",
-                    color="primary",
-                    on_click=self.use_selected_file
-                ).classes(
-                    "w-full"
-                )
+                # Context Sources Header
+                ui.label("Datasets & Metadata Contexts").classes("text-sm font-bold text-slate-700")
+
+                # Two-Panel Layout for Dataset and Metadata
+                with ui.row().classes("w-full gap-4 items-stretch flex-wrap"):
+                    # Panel 1: Dataset Context Panel
+                    with ui.card().classes("flex-1 min-w-[300px] p-6 shadow-sm border border-slate-200 bg-white gap-4"):
+                        with ui.row().classes("w-full justify-between items-center"):
+                            ui.label("Dataset Context").classes("text-lg font-bold text-slate-800")
+                            ui.button(
+                                "Add Dataset",
+                                icon="add",
+                                color="primary",
+                                on_click=lambda: self.add_dataset_row()
+                            ).props("outlined dense")
+                        
+                        self.datasets_container = ui.column().classes("w-full gap-4 mt-2")
+                        
+                    # Panel 2: Metadata Context Panel
+                    with ui.card().classes("flex-1 min-w-[300px] p-6 shadow-sm border border-slate-200 bg-white gap-4"):
+                        with ui.row().classes("w-full justify-between items-center"):
+                            ui.label("Metadata Context").classes("text-lg font-bold text-slate-800")
+                            ui.button(
+                                "Add Metadata",
+                                icon="add",
+                                color="primary",
+                                on_click=lambda: self.add_metadata_row()
+                            ).props("outlined dense")
+                        
+                        self.metadata_container = ui.column().classes("w-full gap-4 mt-2")
 
                 ui.separator()
 
-                # =============================================
-                # PROTOCOLS
-                # =============================================
-                ui.label(
-                    "Protocols"
-                ).classes(
-                    "font-bold"
-                )
-
-                with ui.row().classes(
-                    "w-full items-center gap-2"
-                ):
-
-                    self.protocol_select = ui.select(
-                        [],
-                        label="Saved Protocols"
-                    ).classes(
-                        "flex-1"
-                    )
-
-                    ui.button(
-                        "REFRESH",
-                        icon="refresh",
-                        on_click=self.refresh_protocols
-                    )
-
-                ui.button(
-                    "LOAD PROTOCOL",
-                    icon="description",
-                    color="primary",
-                    on_click=self.use_selected_protocol
-                ).classes(
-                    "w-full"
-                )
+                # Row 1.5: Microorganisms Selector
+                with ui.row().classes("w-full gap-4 items-center flex-wrap"):
+                    self.microorganism_select = ui.select(
+                        self.available_microorganisms,
+                        label="Select Microorganisms",
+                        multiple=True,
+                        value=self.selected_microorganisms,
+                        on_change=self.on_microorganisms_changes
+                    ).classes("flex-1 min-w-[250px]")
 
                 ui.separator()
 
-                # =============================================
-                # MICROORGANISMS
-                # =============================================
-                ui.label(
-                    "Microorganisms"
-                ).classes(
-                    "font-bold"
-                )
-
-                self.microorganism_select = ui.select(
-
-                    self.available_microorganisms,
-
-                    label="Select Microorganisms",
-
-                    multiple=True,
-
-                    value=self.selected_microorganisms
-
-                ).classes(
-                    "w-full"
-                )
-
-                self.microorganism_select.on(
-                    "update:model-value",
-                    self.on_microorganisms_changes
-                )
-
-                ui.label(
-                    (
-                        "Select one or more microorganisms. "
-                        "In multi-agent mode, BacDive will be included "
-                        "together with the other src.agents when the question "
-                        "is relevant to the selected microorganisms."
-                    )
-                ).classes(
-                    "text-xs text-slate-500"
-                )
+                # Row 2: Agent Toggles
+                with ui.row().classes("w-full gap-4 items-center flex-wrap"):
+                    ui.label("Available Agents:").classes("font-bold text-sm text-slate-700")
+                    
+                    self.use_dataset = ui.switch("Dataset", value=True)
+                    self.use_protocol = ui.switch("Metadata", value=True)
+                    self.use_crossref = ui.switch("CrossRef", value=True)
+                    self.use_bacdive = ui.switch("BacDive", value=True)
+                    self.use_internet = ui.switch("World Wide Web", value=True)
 
                 ui.separator()
 
-                # =============================================
-                # CONTEXT STATUS
-                # =============================================
-                self.info_label = ui.label(
-                    "No context loaded"
-                ).classes(
-                    "text-sm text-slate-700"
-                )
+                # Row 3: Model config
+                with ui.row().classes("w-full gap-4 items-center flex-wrap"):
 
-                ui.separator()
+                    self.model_select = ui.select(
+                        [
+                            "llama3:latest",
+                            "mistral:latest",
+                            "phi3:latest"
+                        ],
+                        value=self.mem_model,
+                        label="Model"
+                    ).classes("w-48 min-w-[150px]")
 
-                # =============================================
-                # AGENT TOGGLES
-                # =============================================
-                ui.label(
-                    "Agent Controls"
-                ).classes(
-                    "font-bold"
-                )
-
-                self.use_dataset = ui.switch("Use Dataset", value=True)
-
-                self.use_protocol = ui.switch("Use Protocol", value=True)
-                
-                self.use_crossref = ui.switch("Use Crossref", value=True)
-                
-                self.use_bacdive = ui.switch("Use BacDive", value=True)
-                
-                self.use_literature = ui.switch("Use Literature", value=True)
-                
-                self.use_internet = ui.switch("Use Internet", value=True)
-
-                ui.separator()
-
-                # =============================================
-                # MODEL
-                # =============================================
-                self.model_select = ui.select(
-
-                    [
-                        "llama3:latest",
-                        "mistral:latest",
-                        "phi3:latest"
-                    ],
-
-                    value=self.mem_model,
-
-                    label="Model"
-
-                ).classes(
-                    "w-full"
-                )
-
-                ui.label(
-                    "Temperature"
-                ).classes(
-                    "font-bold"
-                )
-
-                self.temperature = ui.slider(
-
-                    min=0,
-
-                    max=1,
-
-                    step=0.1,
-
-                    value=self.mem_temp
-
-                ).classes(
-                    "w-full"
-                )
-
-                ui.separator()
-
-                # =============================================
-                # CLEAR CHAT
-                # =============================================
-                ui.button(
-
-                    "CLEAR CHAT",
-
-                    icon="delete",
-
-                    color="negative",
-
-                    on_click=self.clear_chat
-
-                ).classes(
-                    "w-full"
-                )
+                    with ui.column().classes("flex-1 min-w-[200px] gap-1"):
+                        ui.label("Temperature").classes("text-xs text-slate-500 font-bold")
+                        self.temperature = ui.slider(
+                            min=0,
+                            max=1,
+                            step=0.1,
+                            value=self.mem_temp
+                        ).classes("w-full")
 
             # =================================================
-            # MAIN CHAT AREA
+            # CHAT AREA CARD
             # =================================================
-            with ui.column().classes(
-                "flex-1 p-4 gap-3"
-            ):
-
-                # =============================================
-                # CHAT WINDOW
-                # =============================================
+            with ui.card().classes("w-full rounded-xl shadow-md p-6 gap-4"):
+                
+                # Chat window
                 self.chat_box = ui.column().classes(
-
-                    "w-full h-[720px] overflow-auto "
-                    "bg-white p-4 rounded shadow gap-3"
-
+                    "w-full h-[600px] overflow-auto bg-slate-50 p-4 rounded-lg gap-3 border border-slate-100"
                 )
 
-                # =============================================
-                # USER INPUT
-                # =============================================
-                with ui.row().classes(
-                    "w-full items-end gap-3"
-                ):
+                # Input area
+                with ui.row().classes("w-full items-end gap-3"):
 
                     self.user_input = ui.textarea(
-
                         placeholder=(
                             "Ask about fermentation datasets, "
                             "oxygen limitation, metadata, "
                             "literature, BacDive microorganisms, "
                             "growth conditions, physiology, anomalies..."
                         )
+                    ).classes("flex-1")
 
-                    ).classes(
-                        "flex-1"
-                    )
+                    with ui.row().classes("no-wrap items-center gap-2"):
+                        self.send_btn = ui.button(
+                            "SEND",
+                            icon="send",
+                            color="primary",
+                            on_click=self.send_message
+                        ).classes("h-12 w-24")
 
-                    self.send_btn = ui.button(
+                        self.export_btn = ui.button(
+                            "EXPORT",
+                            icon="download",
+                            color="secondary",
+                            on_click=self.export_chat
+                        ).classes("h-12 w-28")
 
-                        "SEND",
-
-                        icon="send",
-
-                        color="primary",
-
-                        on_click=self.send_message
-
-                    )
-
-                    ui.button(
-
-                        "RUN MULTI-AGENT",
-
-                        icon="smart_toy",
-
-                        color="secondary",
-
-                        on_click=self.run_multi_agent_pipeline
-
-                    )
+                        self.clear_btn = ui.button(
+                            "CLEAR",
+                            icon="delete",
+                            color="negative",
+                            on_click=self.clear_chat
+                        ).classes("h-12 w-26")
 
         # =====================================================
         # INITIAL REFRESH
         # =====================================================
         self.refresh_loaded_files()
-
-        self.refresh_protocols()
 
         # =====================================================
         # RESTORE MICROORGANISMS FROM STORAGE
@@ -1747,89 +2038,54 @@ If BacDive evidence is missing, say that clearly.
         )
 
         if saved_microorganisms:
-
-            if isinstance(
-                saved_microorganisms,
-                str
-            ):
-
-                saved_microorganisms = [
-                    saved_microorganisms
-                ]
-
+            if isinstance(saved_microorganisms, str):
+                saved_microorganisms = [saved_microorganisms]
             saved_microorganisms = [
                 m
                 for m in saved_microorganisms
                 if m in self.available_microorganisms
             ]
-
             self.selected_microorganisms = saved_microorganisms
-
             try:
-
                 self.microorganism_select.value = saved_microorganisms
-
                 self.microorganism_select.update()
-
             except Exception as ex:
+                print(f"[MICROORGANISM RESTORE ERROR] {ex}")
 
-                print(
-                    f"[MICROORGANISM RESTORE ERROR] {ex}"
+        # =====================================================
+        # RESTORE DATASET & METADATA SELECTIONS
+        # =====================================================
+        mem = self.storage.get("llm_memory", {})
+        saved_ds = mem.get("selected_datasets_multi", [])
+        if saved_ds and len(saved_ds) > 0:
+            for ds in saved_ds:
+                self.add_dataset_row(ds.get("filename"), ds.get("filters"))
+        else:
+            # Fallback to single last loaded dataset if present, or add one empty row
+            last_file = self.storage.get("last_loaded_file", self.mem_file)
+            if last_file and last_file in self.get_available_files():
+                self.add_dataset_row(last_file)
+            else:
+                self.add_dataset_row()
+
+        saved_md = mem.get("selected_metadata_multi", [])
+        if saved_md and len(saved_md) > 0:
+            for md in saved_md:
+                self.add_metadata_row(
+                    md.get("filename"),
+                    md.get("investigation"),
+                    md.get("study"),
+                    md.get("unit"),
+                    md.get("sample"),
+                    md.get("assay")
                 )
-
-        # =====================================================
-        # AUTO LOAD LAST DATASET
-        # =====================================================
-        last = self.storage.get(
-            "last_loaded_file"
-        )
-
-        if (
-            last
-            and hasattr(
-                self,
-                "file_select"
-            )
-            and last in self.file_select.options
-        ):
-
-            self.file_select.value = last
-
-            self.file_select.update()
-
-            cached = self.storage.get(
-                "parsed_cache",
-                {}
-            ).get(
-                last
-            )
-
-            if cached:
-
-                self.df = pd.DataFrame(
-                    cached
-                )
-
-                self.current_df = self.df
-
-                self.storage[
-                    "parsed_df_json"
-                ] = cached
-
-        elif (
-            hasattr(
-                self,
-                "file_select"
-            )
-            and self.file_select.value
-        ):
-
-            self.use_selected_file()
-
-        # =====================================================
-        # RESTORE PROTOCOL
-        # =====================================================
-        self.use_selected_protocol()
+        else:
+            # Fallback to single last loaded protocol if present, or add one empty row
+            last_proto = self.storage.get("selected_protocol", self.mem_protocol)
+            if last_proto and last_proto in self.saved_protocol_names():
+                self.add_metadata_row(last_proto)
+            else:
+                self.add_metadata_row()
 
         # =====================================================
         # REFRESH STATUS
@@ -1840,50 +2096,30 @@ If BacDive evidence is missing, say that clearly.
     # INFO
     # =====================================================
     def refresh_info(self):
-
         parts = []
+        datasets_count = len([d for d in getattr(self, "selected_datasets", []) if d.get("filename")])
+        if datasets_count > 0:
+            parts.append(f"Datasets: {datasets_count}")
+            
+        metadata_count = len([m for m in getattr(self, "selected_metadata_list", []) if m.get("filename")])
+        if metadata_count > 0:
+            parts.append(f"Metadata Files: {metadata_count}")
 
-        if self.df is not None:
-
-            parts.append(
-                f"Dataset: {len(self.df)}x{len(self.df.columns)}"
-            )
-
-        if self.protocol_data:
-
-            parts.append(
-                "Protocol Loaded"
-            )
-
-        if self.selected_microorganisms:
-
-            parts.append(
-                "Microorganisms: "
-                + ", ".join(
-                    self.selected_microorganisms
-                )
-            )
+        if getattr(self, "selected_microorganisms", None):
+            parts.append("Microorganisms: " + ", ".join(self.selected_microorganisms))
 
         if not parts:
+            parts.append("No context loaded")
 
-            parts.append(
-                "No context loaded"
-            )
-
-        if hasattr(
-            self,
-            "info_label"
-        ):
-
-            self.info_label.text = " | ".join(
-                parts
-            )
+        if hasattr(self, "info_label"):
+            self.info_label.text = " | ".join(parts)
 
     # =====================================================
     # CHAT
     # =====================================================
     def clear_chat(self):
-
+        if hasattr(self, "chat_history"):
+            self.chat_history.clear()
         if hasattr(
             self,
             "chat_box"
@@ -1896,6 +2132,9 @@ If BacDive evidence is missing, say that clearly.
         role,
         text
     ):
+        if not hasattr(self, "chat_history"):
+            self.chat_history = []
+        self.chat_history.append((role, text))
 
         if not hasattr(
             self,
@@ -1927,6 +2166,241 @@ If BacDive evidence is missing, say that clearly.
                 ).classes(
                     "whitespace-pre-wrap"
                 )
+        self.chat_box.run_method("scrollTo", {"top": 99999, "behavior": "smooth"})
+
+    def add_agent_card(
+        self,
+        title,
+        status,
+        inputs=None,
+        outputs=None,
+        summary="",
+        reasoning=""
+    ):
+        if not hasattr(self, "chat_history"):
+            self.chat_history = []
+        
+        hist_text = f"=== {title.upper()} ===\n"
+        hist_text += f"Status: {status}\n"
+        if inputs:
+            hist_text += f"Inputs: {inputs}\n"
+        if outputs:
+            hist_text += f"Outputs: {outputs}\n"
+        if summary:
+            hist_text += f"Summary: {summary}\n"
+        if reasoning:
+            hist_text += f"Reasoning: {reasoning}\n"
+        self.chat_history.append((title, hist_text))
+        
+        if not hasattr(self, "chat_box"):
+            print(hist_text)
+            return
+
+        status_lower = status.lower()
+        if status_lower == "success":
+            status_bg = "bg-emerald-50"
+            status_text_color = "text-emerald-700"
+            status_border = "border-emerald-200"
+        elif status_lower == "skipped":
+            status_bg = "bg-slate-100"
+            status_text_color = "text-slate-600"
+            status_border = "border-slate-300"
+        else: # failed
+            status_bg = "bg-rose-50"
+            status_text_color = "text-rose-700"
+            status_border = "border-rose-200"
+            
+        icon_map = {
+            "Dataset Analyst": "analytics",
+            "Metadata Analyst": "description",
+            "BacDive Explorer": "biotech",
+            "CrossRef Explorer": "find_in_page",
+            "World Wide Web Explorer": "language",
+            "Master Summarizer": "psychology",
+            "System": "settings"
+        }
+        icon = icon_map.get(title, "smart_toy")
+
+        with self.chat_box:
+            with ui.card().classes(f"w-full shadow-md border {status_border} rounded-xl p-4 bg-white"):
+                # Header row
+                with ui.row().classes("w-full justify-between items-center no-wrap"):
+                    with ui.row().classes("items-center gap-2 no-wrap"):
+                        ui.icon(icon, size="sm").classes("text-slate-700")
+                        ui.label(title).classes("text-lg font-bold text-slate-800")
+                    # Status badge
+                    ui.label(status.upper()).classes(f"text-xs font-bold px-2.5 py-1 rounded-full {status_bg} {status_text_color} border border-current")
+                
+                ui.separator().classes("my-2")
+                
+                # Content
+                if inputs:
+                    with ui.row().classes("w-full gap-2 items-start mt-1"):
+                        ui.label("📥 Inputs:").classes("font-semibold text-slate-700 text-sm shrink-0")
+                        ui.label(str(inputs)).classes("text-slate-600 text-sm whitespace-pre-wrap")
+                
+                if outputs:
+                    with ui.row().classes("w-full gap-2 items-start mt-1"):
+                        ui.label("📤 Outputs:").classes("font-semibold text-slate-700 text-sm shrink-0")
+                        ui.label(str(outputs)).classes("text-slate-600 text-sm whitespace-pre-wrap")
+                
+                if summary:
+                    with ui.column().classes("w-full gap-1 mt-2"):
+                        ui.label("📝 Summary:").classes("font-semibold text-slate-700 text-sm")
+                        ui.label(str(summary)).classes("text-slate-600 text-sm italic whitespace-pre-wrap")
+                
+                if reasoning:
+                    with ui.expansion("🧠 View Detailed Reasoning & Analysis", icon="psychology").classes("w-full mt-3 border border-slate-100 rounded-lg bg-slate-50 text-sm"):
+                        ui.markdown(reasoning).classes("text-slate-700 p-3 whitespace-pre-wrap")
+        
+        self.chat_box.run_method("scrollTo", {"top": 99999, "behavior": "smooth"})
+
+    def add_master_card(
+        self,
+        title,
+        status,
+        inputs=None,
+        outputs=None,
+        summary="",
+        reasoning=""
+    ):
+        if not hasattr(self, "chat_history"):
+            self.chat_history = []
+        
+        hist_text = f"=== {title.upper()} ===\n"
+        hist_text += f"Status: {status}\n"
+        if inputs:
+            hist_text += f"Inputs: {inputs}\n"
+        if outputs:
+            hist_text += f"Outputs: {outputs}\n"
+        if summary:
+            hist_text += f"Summary: {summary}\n"
+        if reasoning:
+            hist_text += f"Reasoning: {reasoning}\n"
+        self.chat_history.append((title, hist_text))
+        
+        if not hasattr(self, "chat_box"):
+            print(hist_text)
+            return
+
+        with self.chat_box:
+            with ui.card().classes("w-full shadow-lg border border-blue-200 rounded-xl p-5 bg-white"):
+                # Header row
+                with ui.row().classes("w-full justify-between items-center no-wrap"):
+                    with ui.row().classes("items-center gap-2 no-wrap"):
+                        ui.icon("psychology", size="md").classes("text-blue-600")
+                        ui.label(title).classes("text-xl font-bold text-blue-900")
+                    # Status badge
+                    ui.label(status.upper()).classes("text-xs font-bold px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-200")
+                
+                ui.separator().classes("my-3")
+                
+                # Content
+                if summary:
+                    ui.label(str(summary)).classes("text-slate-800 text-sm font-semibold mb-2")
+                
+                if reasoning:
+                    ui.markdown(reasoning).classes("text-slate-800 text-base leading-relaxed")
+        
+        self.chat_box.run_method("scrollTo", {"top": 99999, "behavior": "smooth"})
+
+    def add_workflow_start_card(self, query, participating):
+        if not hasattr(self, "chat_history"):
+            self.chat_history = []
+        self.chat_history.append(("User", query))
+        self.chat_history.append(("System", f"Starting multi-agent workflow. Participating: {', '.join(participating)}"))
+        
+        if not hasattr(self, "chat_box"):
+            return
+            
+        with self.chat_box:
+            # First, display the user prompt nicely in a right-aligned card
+            with ui.row().classes("w-full justify-end"):
+                with ui.card().classes("max-w-[80%] bg-indigo-50 border border-indigo-100 rounded-xl p-4 shadow-sm"):
+                    ui.label("User Request").classes("text-xs font-bold text-indigo-700 uppercase tracking-wider")
+                    ui.label(query).classes("text-slate-800 text-base whitespace-pre-wrap mt-1")
+            
+            # Then show workflow start card
+            with ui.card().classes("w-full shadow-sm border border-slate-200 rounded-xl p-4 bg-slate-50"):
+                with ui.row().classes("items-center gap-2"):
+                    ui.icon("play_circle", size="sm").classes("text-slate-700")
+                    ui.label("Starting Multi-Agent Workflow").classes("text-base font-bold text-slate-800")
+                
+                ui.separator().classes("my-2")
+                ui.label("Participating Agents:").classes("text-sm font-semibold text-slate-700")
+                
+                for agent in participating:
+                    with ui.row().classes("items-center gap-2 ml-4 mt-1"):
+                        ui.icon("check_circle", size="xs").classes("text-green-500")
+                        ui.label(agent).classes("text-slate-600 text-sm")
+        
+        self.chat_box.run_method("scrollTo", {"top": 99999, "behavior": "smooth"})
+
+    async def export_chat(self):
+        if not hasattr(self, "chat_history") or not self.chat_history:
+            ui.notify("Chat is empty", type="warning")
+            return
+            
+        fname = "chat_export.txt"
+        
+        # Format history
+        export_text = ""
+        for role, text in self.chat_history:
+            export_text += f"=== {role.upper()} ===\n{text}\n\n"
+            
+        js_code = f"""
+        (async () => {{
+            const content = {json.dumps(export_text)};
+            const filename = {json.dumps(fname)};
+            
+            if (window.showSaveFilePicker) {{
+                try {{
+                    const handle = await window.showSaveFilePicker({{
+                        suggestedName: filename,
+                        types: [{{
+                            description: 'Text Files',
+                            accept: {{
+                                'text/plain': ['.txt'],
+                            }},
+                        }}],
+                    }});
+                    const writable = await handle.createWritable();
+                    await writable.write(content);
+                    await writable.close();
+                    return "picker_success";
+                }} catch (err) {{
+                    if (err.name === 'AbortError') {{
+                        return "picker_cancelled";
+                    }}
+                    console.warn("showSaveFilePicker failed, falling back", err);
+                }}
+            }}
+            
+            // Fallback: standard web download
+            const blob = new Blob([content], {{ type: 'text/plain;charset=utf-8' }});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            return "fallback_success";
+        }})()
+        """
+        try:
+            res = await ui.run_javascript(js_code, timeout=60.0)
+            if res == "picker_success":
+                ui.notify("Chat successfully exported via file browser", type="positive")
+            elif res == "picker_cancelled":
+                ui.notify("Export cancelled by user", type="warning")
+            elif res == "fallback_success":
+                ui.notify("Chat exported (downloaded to default location)", type="positive")
+        except Exception as e:
+            # Fallback in case of JS runtime error or security context issue
+            ui.download(export_text.encode("utf-8"), filename=fname)
+            ui.notify("Chat exported (fallback download)", type="positive")
 
     # =====================================================
     # BACDIVE-ONLY FORMATTER
@@ -2260,352 +2734,417 @@ If BacDive evidence is missing, say that clearly.
     # SEND
     # =====================================================
     async def send_message(self):
-
-        prompt = self.user_input.value.strip()
-
-        if not prompt:
-
-            return
-
-        self.add_message(
-            "User",
-            prompt
-        )
-
-        self.user_input.value = ""
-
-        self.send_btn.disable()
-
-        try:
-
-            self.save_memory()
-
-            self.router_llm = OllamaLLM(
-
-                model=self.model_select.value,
-
-                temperature=0.0
-            )
-
-            # =============================================
-            # NORMAL SEND:
-            # This can use BacDive as extra context,
-            # but it does not replace the general assistant unless
-            # the question is clearly BacDive/microorganism-specific.
-            # =============================================
-            bacdive_context = ""
-
-            if (
-                hasattr(
-                    self,
-                    "use_bacdive"
-                )
-                and self.use_bacdive.value
-            ):
-
-                micro_result = await self.handle_microorganism_question(
-                    prompt
-                )
-
-                if micro_result.get(
-                    "used",
-                    False
-                ):
-
-                    bacdive_context = micro_result.get(
-                        "text",
-                        ""
-                    )
-
-            if (
-                hasattr(
-                    self,
-                    "use_crossref"
-                )
-                and self.use_crossref.value
-            ):
-
-                refs = self.crossref_fetch(
-                    prompt
-                )
-
-                if refs:
-
-                    self.add_crossref_cards(
-                        refs
-                    )
-
-            final_prompt = self.build_context(
-                prompt,
-                bacdive_context=bacdive_context
-            )
-
-            answer = await asyncio.to_thread(
-                self.query_ollama,
-                final_prompt
-            )
-
-            self.add_message(
-                "Assistant",
-                answer
-            )
-
-        except Exception as e:
-
-            self.add_message(
-                "Assistant",
-                f"Error: {str(e)}"
-            )
-
-        finally:
-
-            self.send_btn.enable()
+        await self.run_multi_agent_pipeline()
 
     # =====================================================
     # MULTI AGENT PIPELINE
     # =====================================================
     async def run_multi_agent_pipeline(self):
-
         prompt = self.user_input.value.strip()
 
         if not prompt:
-
             ui.notify(
                 "Enter a prompt",
                 type="warning"
             )
-
             return
-
-        self.add_message(
-            "User",
-            f"[MULTI-AGENT]\n{prompt}"
-        )
 
         self.user_input.value = ""
 
         self.send_btn.disable()
+        if hasattr(self, "export_btn"):
+            self.export_btn.disable()
+        if hasattr(self, "clear_btn"):
+            self.clear_btn.disable()
 
         try:
-
             self.save_memory()
 
-            # =============================================
-            # CRITICAL FIX:
-            # Do NOT stop at BacDive.
-            # Determine whether BacDive should be included,
-            # then run the full orchestrator.
-            # =============================================
-            bacdive_route = await asyncio.to_thread(
-                self.get_bacdive_route_for_multi_agent,
-                prompt
-            )
+            datasets = {}
+            for ds in getattr(self, "selected_datasets", []):
+                fname = ds.get("filename")
+                df = ds.get("df")
+                if fname and df is not None:
+                    # apply filters
+                    filtered_df = df.copy()
+                    for tier in ds.get("filter_tiers", []):
+                        col = tier.get("col_select").value
+                        vals = tier.get("val_select").value
+                        if col and vals:
+                            filtered_df = filtered_df[
+                                filtered_df[col]
+                                .astype(str)
+                                .isin(vals)
+                            ]
+                    datasets[fname] = filtered_df
 
-            run_bacdive = (
-                hasattr(self, "use_bacdive")
-                and self.use_bacdive.value
-                
-            )
+            metadata_files = {}
+            for md in getattr(self, "selected_metadata_list", []):
+                fname = md.get("filename")
+                mdata = md.get("metadata_data")
+                if fname and mdata:
+                    inv = md.get("investigation_select").value
+                    study = md.get("study_select").value
+                    unit = md.get("unit_select").value
+                    sample = md.get("sample_select").value
+                    assay = md.get("assay_select").value
+                    
+                    filtered_md = self.filter_metadata_hierarchy(mdata, inv, study, unit, sample, assay)
+                    metadata_files[fname] = filtered_md
 
-            print(
-                "\n========== MULTI-AGENT BACDIVE ROUTE =========="
-            )
+            use_dataset = hasattr(self, "use_dataset") and self.use_dataset.value
+            use_protocol = hasattr(self, "use_protocol") and self.use_protocol.value
+            use_crossref = hasattr(self, "use_crossref") and self.use_crossref.value
+            use_internet = hasattr(self, "use_internet") and self.use_internet.value
+            run_bacdive = hasattr(self, "use_bacdive") and self.use_bacdive.value
 
-            print(
-                json.dumps(
-                    bacdive_route,
-                    indent=2,
-                    default=str
-                )
-            )
+            participating = []
+            if use_dataset:
+                participating.append("Dataset Analyst")
+            if use_protocol:
+                participating.append("Metadata Analyst")
+            if run_bacdive:
+                participating.append("BacDive Explorer")
+            if use_crossref:
+                participating.append("CrossRef Explorer")
+            if use_internet:
+                participating.append("World Wide Web Explorer")
+            participating.append("Master Summarizer")
+
+            self.add_workflow_start_card(prompt, participating)
+            print(f"\n[LLM CoPilot] STARTING PIPELINE: query='{prompt}'")
 
             orchestrator = AgentOrchestrator(
-
                 model_name=self.model_select.value,
-
                 temperature=self.temperature.value
             )
 
-            # =============================================
-            # FULL MULTI-AGENT RUN
-            # This should execute:
-            # - data analyst
-            # - internet explorer
-            # - crossref explorer
-            # - literature reviewer
-            # - bacdive explorer when run_bacdive=True
-            # - metadata analyst
-            # - master summarizer
-            # =============================================
-            try:
+            outputs = {"query": prompt}
 
-                results = await asyncio.to_thread(
-                    orchestrator.run,
+            # 1. Dataset analyst
+            df_to_analyze = None
+            if datasets and isinstance(datasets, dict) and len(datasets) > 0:
+                df_to_analyze = list(datasets.values())[0]
+
+            placeholder1 = ui.column().classes("w-full")
+            if use_dataset:
+                with placeholder1:
+                    spinner = ui.row().classes("items-center gap-2 p-3 bg-slate-100 rounded-lg border border-slate-200 w-full")
+                    with spinner:
+                        ui.spinner(size="sm", color="primary")
+                        ui.label("Dataset Analyst is running...").classes("text-slate-600 text-sm font-medium")
                 
+                print(f"[LLM CoPilot] DATA_ANALYST: starting")
+                
+                result = await asyncio.to_thread(
+                    orchestrator.safe_run,
+                    "DATA_ANALYST",
+                    orchestrator.data_agent.run,
                     query=prompt,
+                    dataframe=df_to_analyze,
+                    use_llm=True
+                )
                 
-                    dataframe=(
-                        self.df
-                        if hasattr(self, "use_dataset") and self.use_dataset.value
-                        else None
-                    ),
+                outputs["data_analyst"] = result
+                print(f"[LLM CoPilot] DATA_ANALYST: completed (Status: {result.get('agent_status', 'unknown')})")
                 
-                    metadata=(
-                        self.storage.get("metadata", {})
-                        if hasattr(self, "use_protocol") and self.use_protocol.value
-                        else None
-                    ),
+                placeholder1.clear()
+                with placeholder1:
+                    status = result.get("agent_status", "skipped")
+                    inputs_str = f"Dataset: {list(datasets.keys())[0]} ({df_to_analyze.shape[0]} rows x {df_to_analyze.shape[1]} columns)" if df_to_analyze is not None else "None"
+                    outputs_str = f"Columns: {result.get('summary', {}).get('columns', 0)}, Anomalies: {result.get('summary', {}).get('anomaly_groups', 0)}" if status == "success" else "None"
+                    self.add_agent_card(
+                        "Dataset Analyst",
+                        status=status,
+                        inputs=inputs_str,
+                        outputs=outputs_str,
+                        summary=result.get("agent_summary", ""),
+                        reasoning=result.get("assessment", "")
+                    )
+            else:
+                outputs["data_analyst"] = orchestrator.skipped_agent("DATA_ANALYST", "Dataset analysis skipped.")
+
+            # 2. Metadata analyst
+            meta_to_analyze = None
+            if metadata_files and isinstance(metadata_files, dict) and len(metadata_files) > 0:
+                meta_to_analyze = list(metadata_files.values())[0]
+
+            placeholder2 = ui.column().classes("w-full")
+            if use_protocol:
+                with placeholder2:
+                    spinner = ui.row().classes("items-center gap-2 p-3 bg-slate-100 rounded-lg border border-slate-200 w-full")
+                    with spinner:
+                        ui.spinner(size="sm", color="primary")
+                        ui.label("Metadata Analyst is running...").classes("text-slate-600 text-sm font-medium")
                 
-                    protocol=(
-                        self.protocol_data
-                        if hasattr(self, "use_protocol") and self.use_protocol.value
-                        else None
-                    ),
+                print(f"[LLM CoPilot] METADATA_ANALYST: starting")
                 
-                    selected_microorganisms=self.selected_microorganisms,
+                result = await asyncio.to_thread(
+                    orchestrator.safe_run,
+                    "METADATA_ANALYST",
+                    orchestrator.metadata_agent.run,
+                    metadata=meta_to_analyze,
+                    use_llm=True
+                )
                 
-                    use_dataset=(
-                        hasattr(self, "use_dataset") and self.use_dataset.value
-                    ),
+                outputs["metadata_analyst"] = result
+                print(f"[LLM CoPilot] METADATA_ANALYST: completed (Status: {result.get('agent_status', 'unknown')})")
                 
-                    use_protocol=(
-                        hasattr(self, "use_protocol") and self.use_protocol.value
-                    ),
+                placeholder2.clear()
+                with placeholder2:
+                    status = result.get("agent_status", "skipped")
+                    inputs_str = f"Metadata: {list(metadata_files.keys())[0]}" if meta_to_analyze is not None else "None"
+                    outputs_str = f"Investigation: {result.get('summary', {}).get('investigation', 'unknown')}, Study: {result.get('summary', {}).get('study', 'unknown')}" if status == "success" else "None"
+                    self.add_agent_card(
+                        "Metadata Analyst",
+                        status=status,
+                        inputs=inputs_str,
+                        outputs=outputs_str,
+                        summary=result.get("agent_summary", ""),
+                        reasoning=result.get("assessment", "")
+                    )
+            else:
+                outputs["metadata_analyst"] = orchestrator.skipped_agent("METADATA_ANALYST", "Metadata analysis skipped.")
+
+            # 3. BacDive Explorer
+            placeholder3 = ui.column().classes("w-full")
+            resolved_organisms = []
+            if run_bacdive:
+                with placeholder3:
+                    spinner = ui.row().classes("items-center gap-2 p-3 bg-slate-100 rounded-lg border border-slate-200 w-full")
+                    with spinner:
+                        ui.spinner(size="sm", color="primary")
+                        ui.label("BacDive Explorer: Resolving organisms...").classes("text-slate-600 text-sm font-medium")
                 
-                    use_crossref=(
-                        hasattr(self, "use_crossref") and self.use_crossref.value
-                    ),
+                print(f"[LLM CoPilot] BACDIVE_EXPLORER: resolving organisms")
+                resolved_organisms = await asyncio.to_thread(
+                    orchestrator.resolve_bacdive_organisms,
+                    query=prompt,
+                    protocol=meta_to_analyze,
+                    metadata=meta_to_analyze,
+                    dataframe=df_to_analyze,
+                    selected_microorganisms=self.selected_microorganisms
+                )
                 
-                    use_internet=(
-                        hasattr(self, "use_internet") and self.use_internet.value
-                    ),
+                outputs["detected_organisms"] = {
+                    "agent_name": "DETECTED_ORGANISMS",
+                    "agent_status": "success" if resolved_organisms else "skipped",
+                    "organisms": resolved_organisms
+                }
+
+                if resolved_organisms:
+                    placeholder3.clear()
+                    with placeholder3:
+                        spinner = ui.row().classes("items-center gap-2 p-3 bg-slate-100 rounded-lg border border-slate-200 w-full")
+                        with spinner:
+                            ui.spinner(size="sm", color="primary")
+                            ui.label(f"BacDive Explorer: Querying database for {', '.join(resolved_organisms)}...").classes("text-slate-600 text-sm font-medium")
                     
-                    use_literature=(
-                        hasattr(self, "use_literature") and self.use_literature.value
-                    ),
+                    bacdive_results = {}
+                    for org in resolved_organisms:
+                        print(f"[LLM CoPilot] BACDIVE_EXPLORER: querying BacDive for '{org}'")
+                        res = await asyncio.to_thread(
+                            orchestrator.safe_run,
+                            "BACDIVE_EXPLORER",
+                            orchestrator.bacdive_agent.run,
+                            query=prompt,
+                            microorganism=org,
+                            use_llm=False,
+                            max_results=None
+                        )
+                        bacdive_results[org] = res
+                    
+                    result = {
+                        "agent_name": "BACDIVE_EXPLORER",
+                        "agent_status": "success",
+                        "results": bacdive_results,
+                        "agent_summary": f"Executed BacDive search for {', '.join(resolved_organisms)}."
+                    }
+                    outputs["bacdive_explorer"] = result
+                    print(f"[LLM CoPilot] BACDIVE_EXPLORER: completed (Status: success, found {len(resolved_organisms)} organisms)")
+                    
+                    placeholder3.clear()
+                    with placeholder3:
+                        reasoning_str = ""
+                        for org, org_res in bacdive_results.items():
+                            reasoning_str += f"### {org}\n{org_res.get('assessment', 'No details available.')}\n\n"
+                        
+                        self.add_agent_card(
+                            "BacDive Explorer",
+                            status="success",
+                            inputs=f"Organisms: {', '.join(resolved_organisms)}",
+                            outputs=f"Found database records for: {', '.join(bacdive_results.keys())}",
+                            summary=result.get("agent_summary", ""),
+                            reasoning=reasoning_str
+                        )
+                else:
+                    outputs["bacdive_explorer"] = orchestrator.skipped_agent("BACDIVE_EXPLORER", "BacDive query skipped (no organisms detected).")
+                    placeholder3.clear()
+                    with placeholder3:
+                        self.add_agent_card(
+                            "BacDive Explorer",
+                            status="skipped",
+                            summary="BacDive query skipped: no organisms detected."
+                        )
+            else:
+                outputs["bacdive_explorer"] = orchestrator.skipped_agent("BACDIVE_EXPLORER", "BacDive query skipped.")
+
+            # 4. Crossref Explorer
+            placeholder4 = ui.column().classes("w-full")
+            if use_crossref:
+                with placeholder4:
+                    spinner = ui.row().classes("items-center gap-2 p-3 bg-slate-100 rounded-lg border border-slate-200 w-full")
+                    with spinner:
+                        ui.spinner(size="sm", color="primary")
+                        ui.label("CrossRef Explorer is running...").classes("text-slate-600 text-sm font-medium")
                 
-                    run_bacdive=(
-                        hasattr(self, "use_bacdive")
-                        and self.use_bacdive.value
-                    ),
+                print(f"[LLM CoPilot] CROSSREF_EXPLORER: starting")
                 
-                    bacdive_result=None,
-                
-                    use_all_agents=False
-                )
-
-            except TypeError:
-
-                # =============================================
-                # BACKWARD COMPATIBILITY:
-                # If your AgentOrchestrator.run() does not yet
-                # accept run_bacdive/bacdive_result, update it.
-                # This fallback prevents total crash but BacDive
-                # may not be included.
-                # =============================================
-                results = await asyncio.to_thread(
-
-                    orchestrator.run,
-
+                result = await asyncio.to_thread(
+                    orchestrator.safe_run,
+                    "CROSSREF_EXPLORER",
+                    orchestrator.crossref_agent.run,
                     query=prompt,
-
-                    dataframe=self.df,
-
-                    metadata=self.storage.get(
-                        "metadata",
-                        {}
-                    ),
-
-                    protocol=self.protocol_data
+                    use_llm=True
                 )
-
-            if not isinstance(
-                results,
-                dict
-            ):
-
-                self.add_message(
-                    "MULTI-AGENT",
-                    str(
-                        results
+                
+                outputs["crossref_explorer"] = result
+                print(f"[LLM CoPilot] CROSSREF_EXPLORER: completed (Status: {result.get('agent_status', 'unknown')})")
+                
+                placeholder4.clear()
+                with placeholder4:
+                    status = result.get("agent_status", "skipped")
+                    outputs_str = f"Papers found: {len(result.get('papers', []))}" if status == "success" else "None"
+                    self.add_agent_card(
+                        "CrossRef Explorer",
+                        status=status,
+                        inputs=f"Query: '{prompt}'",
+                        outputs=outputs_str,
+                        summary=result.get("agent_summary", ""),
+                        reasoning=result.get("assessment", "")
                     )
+            else:
+                outputs["crossref_explorer"] = orchestrator.skipped_agent("CROSSREF_EXPLORER", "CrossRef search skipped.")
+
+            # 5. Internet Explorer
+            placeholder5 = ui.column().classes("w-full")
+            if use_internet:
+                with placeholder5:
+                    spinner = ui.row().classes("items-center gap-2 p-3 bg-slate-100 rounded-lg border border-slate-200 w-full")
+                    with spinner:
+                        ui.spinner(size="sm", color="primary")
+                        ui.label("World Wide Web Explorer is running...").classes("text-slate-600 text-sm font-medium")
+                
+                print(f"[LLM CoPilot] INTERNET_EXPLORER: starting")
+                
+                result = await asyncio.to_thread(
+                    orchestrator.safe_run,
+                    "INTERNET_EXPLORER",
+                    orchestrator.internet_agent.run,
+                    query=prompt,
+                    use_llm=True
                 )
+                
+                outputs["internet_explorer"] = result
+                print(f"[LLM CoPilot] INTERNET_EXPLORER: completed (Status: {result.get('agent_status', 'unknown')})")
+                
+                placeholder5.clear()
+                with placeholder5:
+                    status = result.get("agent_status", "skipped")
+                    outputs_str = f"PubMed: {len(result.get('results', {}).get('pubmed', []))}, Web: {len(result.get('results', {}).get('web', []))}" if status == "success" else "None"
+                    self.add_agent_card(
+                        "World Wide Web Explorer",
+                        status=status,
+                        inputs=f"Query: '{prompt}'",
+                        outputs=outputs_str,
+                        summary=result.get("agent_summary", ""),
+                        reasoning=result.get("assessment", "")
+                    )
+            else:
+                outputs["internet_explorer"] = orchestrator.skipped_agent("INTERNET_EXPLORER", "Internet search skipped.")
 
-                return
+            # 6. Build combined agent summaries
+            outputs["agent_summaries"] = {
+                "agent_name": "AGENT_SUMMARIES",
+                "agent_status": "success",
+                "summaries": orchestrator.collect_agent_summaries(outputs),
+                "agent_summary": "Collected summaries from sequential execution."
+            }
 
-            # =============================================
-            # Prefer master summarizer final answer if present.
-            # =============================================
-            master_keys = [
-                "master_summarizer",
-                "master_summary",
+            # 7. Master Summarizer
+            placeholder6 = ui.column().classes("w-full")
+            with placeholder6:
+                spinner = ui.row().classes("items-center gap-2 p-3 bg-slate-100 rounded-lg border border-slate-200 w-full")
+                with spinner:
+                    ui.spinner(size="sm", color="primary")
+                    ui.label("Master Summarizer is synthesizing...").classes("text-slate-600 text-sm font-medium")
+            
+            print(f"[LLM CoPilot] MASTER_SUMMARIZER: synthesizing findings...")
+            
+            master_result = await asyncio.to_thread(
+                orchestrator.safe_run,
                 "MASTER_SUMMARIZER",
-                "MASTER_SUMMARY",
-                "summary_agent"
-            ]
-
-            displayed_master = False
-
-            for key in master_keys:
-
-                if key in results:
-
-                    formatted = self.format_agent_output(
-                        key,
-                        results[key]
-                    )
-
-                    self.add_message(
-                        "MASTER SUMMARIZER",
-                        formatted
-                    )
-
-                    displayed_master = True
-
-                    break
-
-            # =============================================
-            # Also show individual src.agents so you can verify
-            # that all 7 src.agents actually ran.
-            # =============================================
-            for agent_name, result in results.items():
-
-                if agent_name in master_keys:
-
-                    continue
-
-                formatted = self.format_agent_output(
-                    agent_name,
-                    result
+                orchestrator.master_agent.run,
+                agent_outputs=outputs
+            )
+            
+            outputs["master_summarizer"] = master_result
+            outputs["assessment"] = master_result.get("final_summary", "")
+            
+            print(f"[LLM CoPilot] MASTER_SUMMARIZER: completed")
+            
+            placeholder6.clear()
+            with placeholder6:
+                self.add_master_card(
+                    "Master Summarizer",
+                    status=master_result.get("agent_status", "success"),
+                    summary="Final consensus summary synthesis",
+                    reasoning=master_result.get("final_summary", "")
                 )
 
-                self.add_message(
-                    str(
-                        agent_name
-                    ).upper(),
-                    formatted
-                )
+            # Build final system summary
+            successful_agents = len([
+                v for v in outputs.values()
+                if isinstance(v, dict) and v.get("agent_status") == "success"
+            ])
+            failed_agents = len([
+                v for v in outputs.values()
+                if isinstance(v, dict) and v.get("agent_status") == "failed"
+            ])
+            skipped_agents = len([
+                v for v in outputs.values()
+                if isinstance(v, dict) and v.get("agent_status") == "skipped"
+            ])
 
-            if not displayed_master:
+            outputs["system_summary"] = {
+                "agents_executed": [k for k, v in outputs.items() if isinstance(v, dict) and v.get("agent_status") != "skipped"],
+                "successful_agents": successful_agents,
+                "failed_agents": failed_agents,
+                "skipped_agents": skipped_agents,
+                "model": orchestrator.model_name,
+                "temperature": orchestrator.temperature,
+                "mode": "sequential_multi_agent",
+                "run_started_at": datetime.now().isoformat(),
+                "run_finished_at": datetime.now().isoformat(),
+                "log_directory": orchestrator.log_dir
+            }
 
-                self.add_message(
-                    "SYSTEM",
-                    (
-                        "Multi-agent run completed, but no master "
-                        "summarizer key was found in the orchestrator output."
-                    )
-                )
+            orchestrator.log_system_step("run_completed", outputs["system_summary"])
+            print(f"[LLM CoPilot] PIPELINE COMPLETE: success={successful_agents}, failed={failed_agents}, skipped={skipped_agents}\n")
 
         except Exception as e:
-
+            traceback.print_exc()
             self.add_message(
                 "SYSTEM ERROR",
                 str(e)
             )
 
         finally:
-
             self.send_btn.enable()
+            if hasattr(self, "export_btn"):
+                self.export_btn.enable()
+            if hasattr(self, "clear_btn"):
+                self.clear_btn.enable()
 
     # =====================================================
     # CONTEXT
@@ -2615,51 +3154,55 @@ If BacDive evidence is missing, say that clearly.
         user_prompt,
         bacdive_context=""
     ):
-
         blocks = []
 
         if (
-            hasattr(
-                self,
-                "use_dataset"
-            )
+            hasattr(self, "use_dataset")
             and self.use_dataset.value
-            and self.df is not None
         ):
-
-            blocks.append(
-                "DATASET COLUMNS:\n"
-                + ", ".join(
-                    self.df.columns.astype(
-                        str
+            for ds in getattr(self, "selected_datasets", []):
+                fname = ds.get("filename")
+                df = ds.get("df")
+                if fname and df is not None:
+                    filtered_df = df.copy()
+                    for tier in ds.get("filter_tiers", []):
+                        col = tier.get("col_select").value
+                        vals = tier.get("val_select").value
+                        if col and vals:
+                            filtered_df = filtered_df[
+                                filtered_df[col]
+                                .astype(str)
+                                .isin(vals)
+                            ]
+                    blocks.append(
+                        f"DATASET '{fname}' COLUMNS:\n"
+                        + ", ".join(filtered_df.columns.astype(str))
                     )
-                )
-            )
-
-            blocks.append(
-                f"ROWS: {len(self.df)}"
-            )
+                    blocks.append(
+                        f"DATASET '{fname}' ROWS: {len(filtered_df)}"
+                    )
 
         if (
-            hasattr(
-                self,
-                "use_protocol"
-            )
+            hasattr(self, "use_protocol")
             and self.use_protocol.value
-            and self.protocol_data
         ):
+            for md in getattr(self, "selected_metadata_list", []):
+                fname = md.get("filename")
+                mdata = md.get("metadata_data")
+                if fname and mdata:
+                    inv = md.get("investigation_select").value
+                    study = md.get("study_select").value
+                    unit = md.get("unit_select").value
+                    sample = md.get("sample_select").value
+                    assay = md.get("assay_select").value
+                    
+                    filtered_md = self.filter_metadata_hierarchy(mdata, inv, study, unit, sample, assay)
+                    blocks.append(
+                        f"METADATA '{fname}' CONTEXT:\n"
+                        + json.dumps(filtered_md, indent=2, default=str)
+                    )
 
-            blocks.append(
-                "PROTOCOL CONTEXT:\n"
-                + json.dumps(
-                    self.protocol_data,
-                    indent=2,
-                    default=str
-                )
-            )
-
-        if self.selected_microorganisms:
-
+        if getattr(self, "selected_microorganisms", None):
             blocks.append(
                 "SELECTED MICROORGANISMS:\n"
                 + "\n".join(
@@ -2671,7 +3214,6 @@ If BacDive evidence is missing, say that clearly.
             )
 
         if bacdive_context:
-
             blocks.append(
                 "BACDIVE EVIDENCE CONTEXT:\n"
                 + str(
@@ -2686,7 +3228,6 @@ If BacDive evidence is missing, say that clearly.
             )
             and self.use_crossref.value
         ):
-
             blocks.append(
                 "LITERATURE CONTEXT:\n"
                 + self.crossref_search(

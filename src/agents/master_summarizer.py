@@ -7,7 +7,9 @@ accurate final master summary.
 import json
 import traceback
 
-from langchain_ollama import OllamaLLM
+import os
+from pydantic_ai import Agent, ModelSettings
+from pydantic_ai.models.ollama import OllamaModel
 
 
 class MasterSummarizerAgent:
@@ -43,9 +45,13 @@ class MasterSummarizerAgent:
         print(f"MODEL: {model_name}")
         print(f"TEMPERATURE: {temperature}")
 
-        self.llm = OllamaLLM(
-            model=model_name,
-            temperature=temperature
+        from pydantic_ai.providers.ollama import OllamaProvider
+        base_url = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434/v1")
+        provider = OllamaProvider(base_url=base_url)
+        model = OllamaModel(model_name=model_name, provider=provider)
+        self.agent = Agent(
+            model=model,
+            model_settings=ModelSettings(temperature=temperature)
         )
 
         print("[MASTER SUMMARIZER] READY")
@@ -430,8 +436,7 @@ Use these summaries as the first-level evidence map:
 - CROSSREF_EXPLORER summary:
   DOI/literature metadata evidence.
 
-- LITERATURE_REVIEWER summary:
-  scientific interpretation from literature.
+
 
 - METADATA_ANALYST summary:
   protocol, metadata, missing fields, and quality issues.
@@ -619,7 +624,7 @@ FULL AGENT OUTPUTS
         try:
             print("[MASTER SUMMARIZER] INVOKING OLLAMA...")
 
-            final_summary = self.llm.invoke(prompt)
+            final_summary = self.agent.run_sync(prompt).data
 
             status = "success"
             llm_used = True

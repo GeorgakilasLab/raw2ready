@@ -7,7 +7,9 @@ selected microorganisms and require looking up databases like BacDive.
 import json
 import re
 
-from langchain_ollama import OllamaLLM
+import os
+from pydantic_ai import Agent, ModelSettings
+from pydantic_ai.models.ollama import OllamaModel
 
 
 class MicroorganismRouter:
@@ -33,9 +35,13 @@ class MicroorganismRouter:
         self.model_name = model_name
         self.temperature = temperature
 
-        self.llm = OllamaLLM(
-            model=self.model_name,
-            temperature=self.temperature
+        from pydantic_ai.providers.ollama import OllamaProvider
+        base_url = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434/v1")
+        provider = OllamaProvider(base_url=base_url)
+        model = OllamaModel(model_name=self.model_name, provider=provider)
+        self.agent = Agent(
+            model=model,
+            model_settings=ModelSettings(temperature=self.temperature)
         )
 
     # =====================================================
@@ -52,9 +58,13 @@ class MicroorganismRouter:
         if temperature is not None:
             self.temperature = temperature
 
-        self.llm = OllamaLLM(
-            model=self.model_name,
-            temperature=self.temperature
+        from pydantic_ai.providers.ollama import OllamaProvider
+        base_url = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434/v1")
+        provider = OllamaProvider(base_url=base_url)
+        model = OllamaModel(model_name=self.model_name, provider=provider)
+        self.agent = Agent(
+            model=model,
+            model_settings=ModelSettings(temperature=self.temperature)
         )
 
     # =====================================================
@@ -341,9 +351,10 @@ Rules:
 - Return JSON only.
 """
 
-            response = self.llm.invoke(
+            result = self.agent.run_sync(
                 router_prompt
             )
+            response = result.data
 
             print(
                 "\n========== MICROORGANISM ROUTER RAW =========="
