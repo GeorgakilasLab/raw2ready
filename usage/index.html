@@ -1,0 +1,1231 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Bioprocess Data Curation Platform with AI-Assisted Exploration">
+      
+      
+        <meta name="author" content="Georgakilas Lab / Athena RC">
+      
+      
+        <link rel="canonical" href="https://GeorgakilasLab.github.io/raw2ready/usage/">
+      
+      
+        <link rel="prev" href="../installation/">
+      
+      
+        <link rel="next" href="../architecture/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/raw2ready_favicon.svg">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>Usage Guide - raw2ready</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/custom.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="grey" data-md-color-accent="orange">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#module-usage-guide" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="raw2ready" class="md-header__button md-logo" aria-label="raw2ready" data-md-component="logo">
+      
+  <img src="../assets/images/raw2ready.svg" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            raw2ready
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Usage Guide
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="grey" data-md-color-accent="orange"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="grey" data-md-color-accent="orange"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href=".." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../installation/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Installation
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    <li class="md-tabs__item md-tabs__item--active">
+      <a href="./" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Usage Guide
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../architecture/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Architecture
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="raw2ready" class="md-nav__button md-logo" aria-label="raw2ready" data-md-component="logo">
+      
+  <img src="../assets/images/raw2ready.svg" alt="logo">
+
+    </a>
+    raw2ready
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Usage Guide
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Usage Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-dashboard-module" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Dashboard Module
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="1. Dashboard Module">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#interface-overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Interface &amp; Overview
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-load-module" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Load Module
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2. Load Module">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#dataset-upload-select" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dataset Upload &amp; Select
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tabular-preview-data-cleaning" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tabular Preview &amp; Data Cleaning
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-merge-module" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Merge Module
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3. Merge Module">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#merge-type-dataset-selection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Merge Type &amp; Dataset Selection
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#keys-mapping-alignment-output" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Keys Mapping &amp; Alignment Output
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-calculate-module" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Calculate Module
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="4. Calculate Module">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#custom-formula-calculation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Custom Formula Calculation
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-plot-module" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Plot Module
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="5. Plot Module">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#time-series-visualization-correlation-matrix" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Time-Series Visualization &amp; Correlation Matrix
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-metadata-module" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Metadata Module
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="6. Metadata Module">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#investigation-setup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Investigation Setup
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#study-definition" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Study Definition
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#observation-units-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Observation Units Configuration
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#samples-tracking" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Samples Tracking
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#assays-registration-mife-export" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Assays Registration &amp; MIFE Export
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-llm-module" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. LLM Module
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="7. LLM Module">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#agent-chatbot-interface" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Agent Chatbot Interface
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8-help-module" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. Help Module
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="8. Help Module">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#help-documentation-portal" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Help &amp; Documentation Portal
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-dashboard-module" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Dashboard Module
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="1. Dashboard Module">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#interface-overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Interface &amp; Overview
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-load-module" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Load Module
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2. Load Module">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#dataset-upload-select" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dataset Upload &amp; Select
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tabular-preview-data-cleaning" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tabular Preview &amp; Data Cleaning
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-merge-module" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Merge Module
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3. Merge Module">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#merge-type-dataset-selection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Merge Type &amp; Dataset Selection
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#keys-mapping-alignment-output" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Keys Mapping &amp; Alignment Output
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-calculate-module" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Calculate Module
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="4. Calculate Module">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#custom-formula-calculation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Custom Formula Calculation
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-plot-module" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Plot Module
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="5. Plot Module">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#time-series-visualization-correlation-matrix" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Time-Series Visualization &amp; Correlation Matrix
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-metadata-module" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Metadata Module
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="6. Metadata Module">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#investigation-setup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Investigation Setup
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#study-definition" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Study Definition
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#observation-units-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Observation Units Configuration
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#samples-tracking" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Samples Tracking
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#assays-registration-mife-export" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Assays Registration &amp; MIFE Export
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-llm-module" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. LLM Module
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="7. LLM Module">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#agent-chatbot-interface" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Agent Chatbot Interface
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8-help-module" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. Help Module
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="8. Help Module">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#help-documentation-portal" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Help &amp; Documentation Portal
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="module-usage-guide">Module Usage Guide</h1>
+<p>This guide walks you through the functionality of each module in the <strong>raw2ready</strong> application.</p>
+<hr />
+<h2 id="1-dashboard-module">1. Dashboard Module</h2>
+<p>The <strong>Dashboard</strong> module acts as the home portal of the application. It displays high-level statistics of the loaded bioprocess datasets, including:
+- Total number of loaded files
+- Combined total row count
+- Combined total column count
+- The filename of the last loaded dataset
+- A dynamic, sortable <strong>Loaded Datasets Matrix</strong> table displaying the file names, row/column dimensions, and their memory footprints in megabytes (MB).</p>
+<h3 id="interface-overview">Interface &amp; Overview</h3>
+<p><img alt="Dashboard Overview Placeholder" src="assets/images/placeholder_dashboard_overview.png" />
+<em>Placeholder: High-level dashboard statistics cards and the loaded dataset matrix.</em></p>
+<hr />
+<h2 id="2-load-module">2. Load Module</h2>
+<p>The <strong>Load</strong> module allows users to import, preview, clean, and validate raw experimental files. It parses raw sheets from Sartorius bioreactors, BioLectorXT devices, gas analyzers, and generic CSV/Excel data files. Users can inspect the raw data structure, verify datatypes, perform basic cleaning operations (e.g., removing duplicates, deleting columns, removing empty rows), and cache the cleaned data.</p>
+<h3 id="dataset-upload-select">Dataset Upload &amp; Select</h3>
+<p><img alt="Load Upload Placeholder" src="assets/images/placeholder_load_upload.png" />
+<em>Placeholder: The upload area and dataset selector menu.</em></p>
+<h3 id="tabular-preview-data-cleaning">Tabular Preview &amp; Data Cleaning</h3>
+<p><img alt="Load Preview Placeholder" src="assets/images/placeholder_load_preview.png" />
+<em>Placeholder: Tabular data grid showing the parsed contents and data cleaning action panel.</em></p>
+<hr />
+<h2 id="3-merge-module">3. Merge Module</h2>
+<p>The <strong>Merge</strong> module enables users to combine distinct datasets. It supports:
+- <strong>Row-wise (Concatenation)</strong>: Append rows of datasets with similar schemas (e.g., repeating runs).
+- <strong>Column-wise (Join/Merge)</strong>: Combine different parameter measurements (e.g., offline glucose measurements and online bioreactor logs) by matching timestamps or specific keys.</p>
+<h3 id="merge-type-dataset-selection">Merge Type &amp; Dataset Selection</h3>
+<p><img alt="Merge Configuration Placeholder" src="assets/images/placeholder_merge_config.png" />
+<em>Placeholder: Selecting row-wise vs column-wise merging and choosing target datasets.</em></p>
+<h3 id="keys-mapping-alignment-output">Keys Mapping &amp; Alignment Output</h3>
+<p><img alt="Merge Alignment Placeholder" src="assets/images/placeholder_merge_alignment.png" />
+<em>Placeholder: Map alignment columns, select merge key, and preview the resulting merged dataframe.</em></p>
+<hr />
+<h2 id="4-calculate-module">4. Calculate Module</h2>
+<p>The <strong>Calculate</strong> module provides a safe math expression evaluator to compute new derived bioprocess parameters. Users can select any active dataset, specify python/numpy formulas (e.g. <code>log(Biomass_1) * Temp</code>), define column aliases, and execute calculations across specific filtered ranges of data. The resulting calculated column is added to the dataset and saved back to the session cache.</p>
+<h3 id="custom-formula-calculation">Custom Formula Calculation</h3>
+<p><img alt="Calculate Formula Placeholder" src="assets/images/placeholder_calculate_formula.png" />
+<em>Placeholder: Formula input field, variable alias mappings, and target column configuration panel.</em></p>
+<hr />
+<h2 id="5-plot-module">5. Plot Module</h2>
+<p>The <strong>Plot</strong> module offers visual exploration of time-series bioprocess logs and correlation analyses. It renders interactive charts to visualize data trends, correlation matrices to examine connections between parameters, and simple regression lines to forecast future data behavior.</p>
+<h3 id="time-series-visualization-correlation-matrix">Time-Series Visualization &amp; Correlation Matrix</h3>
+<p><img alt="Plot Chart Placeholder" src="assets/images/placeholder_plot_chart.png" />
+<em>Placeholder: Line chart visualization of parameters vs elapsed time and correlation heatmaps.</em></p>
+<hr />
+<h2 id="6-metadata-module">6. Metadata Module</h2>
+<p>The <strong>Metadata</strong> module builds fermentation experiment metadata schemas following the ISA/MIM structure (<a href="https://doi.org/10.1093/gigascience/giag038">MIFE</a> standard). It enables tracking investigations, studies, observation units, samples, and assays. Users can define study designs, configure factors, add sample characteristics, register assays, and export/import standard JSON metadata protocols.</p>
+<h3 id="investigation-setup">Investigation Setup</h3>
+<p><img alt="Metadata Investigation Placeholder" src="assets/images/placeholder_metadata_investigation.png" />
+<em>Placeholder: Form inputs for describing investigations.</em></p>
+<h3 id="study-definition">Study Definition</h3>
+<p><img alt="Metadata Study Placeholder" src="assets/images/placeholder_metadata_study.png" />
+<em>Placeholder: Form inputs for study metadata and protocols.</em></p>
+<h3 id="observation-units-configuration">Observation Units Configuration</h3>
+<p><img alt="Metadata Observation Placeholder" src="assets/images/placeholder_metadata_observation.png" />
+<em>Placeholder: Describing bioreactors, replicates, and experimental groups.</em></p>
+<h3 id="samples-tracking">Samples Tracking</h3>
+<p><img alt="Metadata Samples Placeholder" src="assets/images/placeholder_metadata_samples.png" />
+<em>Placeholder: Registering extracted samples, timestamps, and properties.</em></p>
+<h3 id="assays-registration-mife-export">Assays Registration &amp; MIFE Export</h3>
+<p><img alt="Metadata Assays Placeholder" src="assets/images/placeholder_metadata_assays.png" />
+<em>Placeholder: Selecting measurement types, instruments, and exporting the final schema.</em></p>
+<hr />
+<h2 id="7-llm-module">7. LLM Module</h2>
+<p>The <strong>LLM (Large Language Model) Dataset</strong> module provides a local chatbot assistant. Users can ask questions about their datasets in natural language (e.g. <em>"What is the max pH value?"</em>), retrieve protocols, and enable multi-agent systems to search literature (CrossRef), biological repositories (BacDive), or the internet (DuckDuckGo).</p>
+<h3 id="agent-chatbot-interface">Agent Chatbot Interface</h3>
+<p><img alt="LLM Chat Placeholder" src="assets/images/placeholder_llm_chat.png" />
+<em>Placeholder: Natural language chat interface with agent toggle panels.</em></p>
+<p>It currently supports the following agents: data analysis (loaded data), experimental conditions (loaded metadata based on <a href="https://doi.org/10.1093/gigascience/giag038">MIFE</a> standard), literature search (<a href="https://www.crossref.org/">CrossRef</a>), microbial information (<a href="https://bacdive.dsmz.de/">BacDive</a>), and general web search (<a href="https://duckduckgo.com/">DuckDuckGo</a>).</p>
+<hr />
+<h2 id="8-help-module">8. Help Module</h2>
+<p>The <strong>Help</strong> module acts as an interactive user manual. It lists keyboard shortcuts, explains layout elements, and offers quick guides to solve common parsing or merging issues.</p>
+<h3 id="help-documentation-portal">Help &amp; Documentation Portal</h3>
+<p><img alt="Help Guide Placeholder" src="assets/images/placeholder_help_guide.png" />
+<em>Placeholder: FAQ guide, documentation indexes, and support references.</em></p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.tabs", "navigation.sections", "content.code.copy"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>
